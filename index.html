@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Trello 甘特圖 Power-Up</title>
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+<script>
+TrelloPowerUp.initialize({
+  'board-buttons': function (t) {
+    return [{
+      text: '甘特圖',
+      callback: function (t) {
+        return t.modal({
+          title: '甘特圖',
+          url: './trello-gantt.html',
+          fullscreen: true
+        });
+      }
+    }];
+  }
+});
+</script>
+</body>
+</html>
