@@ -11,28 +11,30 @@
 :root{--bg:#f4f6f8;--card:#fff;--ink:#1c2630;--mute:#6b7785;--line:#e3e8ee;--acc:#1f6f78}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
-header{padding:20px 28px 4px}
-h1{font-size:22px;margin:0 0 4px}
-header p{margin:0;color:var(--mute)}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;margin:16px 28px;padding:16px 20px}
-.panel h2{font-size:15px;margin:0 0 10px}
+header{padding:20px 28px 4px}h1{font-size:22px;margin:0 0 4px}header p{margin:0;color:var(--mute)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;margin:12px 28px;padding:12px 20px}
+summary{cursor:pointer;font-weight:600;font-size:15px}summary .sm{font-weight:400;color:var(--mute);font-size:13px;margin-left:10px}
+details[open]>summary{margin-bottom:12px}
 .row2{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
 label.f{display:flex;flex-direction:column;font-size:12px;color:var(--mute);gap:4px}
-input[type=text],input[type=password]{width:260px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit}
+input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff;color:var(--ink)}
+input[type=text],input[type=password]{width:260px}textarea{width:100%;min-height:64px;resize:vertical}
 button{padding:8px 16px;border:0;border-radius:6px;background:var(--acc);color:#fff;font:inherit;cursor:pointer}
 button.sec{background:#fff;color:var(--acc);border:1px solid var(--acc)}
+button.lk{background:none;color:var(--acc);padding:0 4px;text-decoration:underline}
 button:disabled{opacity:.45;cursor:default}
-button:focus-visible,input:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}
 #boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;margin-bottom:12px}
 #boards label{display:flex;gap:8px;align-items:center}
-.msg{color:var(--mute);margin-top:8px}.err{color:#b3261e}
-.bar-act{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.msg{color:var(--mute);margin-top:8px}.err{color:#b3261e}.ok{color:#1d7a46}
+.bar-act{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap}
 #wrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:6px;background:#fff}
 #wrap.exporting{overflow:visible;max-height:none}
-#wrap.exporting .lab,#wrap.exporting .hd .lab{position:static}
+#wrap.exporting .lab{position:static}
 .g{display:inline-block;min-width:100%}
 .r{display:flex;height:30px;border-bottom:1px solid var(--line)}
 .lab{position:sticky;left:0;z-index:3;flex:none;width:300px;background:#fff;border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
+.lab[data-i]{cursor:pointer}.lab[data-i]:hover{background:#f1f7f8}
 .lab .n{overflow:hidden;text-overflow:ellipsis;flex:1}
 .lab .m{color:var(--mute);font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis}
 .bd{background:#eef2f5;font-weight:600}.bd .lab{background:#eef2f5}
@@ -40,71 +42,108 @@ button:focus-visible,input:focus-visible{outline:2px solid #e8a33d;outline-offse
 .track{position:relative;flex:none}
 .cell{position:absolute;top:0;height:100%;font-size:11px;color:var(--mute);text-align:center;border-left:1px solid var(--line);overflow:hidden}
 .wk{background:rgba(0,0,0,.035)}
-.bar{position:absolute;top:6px;height:18px;border-radius:4px;opacity:.95;min-width:6px}
+.bar{position:absolute;top:6px;height:18px;border-radius:4px;opacity:.95;min-width:6px;cursor:pointer}
 .bar.done{opacity:.4}.bar.late{outline:2px solid #c0392b}
 .today{position:absolute;top:0;bottom:0;width:2px;background:#e8a33d;z-index:2}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mute)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+dialog{width:min(620px,94vw);border:1px solid var(--line);border-radius:10px;padding:20px;color:var(--ink)}
+dialog::backdrop{background:rgba(20,30,40,.4)}
+.dh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.dh b{font-size:17px}.x{background:none;color:var(--mute);padding:2px 8px;font-size:16px}
+.sub{color:var(--mute);font-size:13px;margin:4px 0 14px}
+dialog h3{font-size:14px;margin:18px 0 8px}
+#cm{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.c{background:#f6f8fa;border-radius:6px;padding:8px 10px}.ch{font-size:12px;color:var(--mute)}.ch b{color:var(--ink)}
+.ct{white-space:pre-wrap;word-break:break-word;margin-top:2px}
 </style>
 </head>
 <body>
-<header><h1>Trello 甘特圖</h1><p>選擇看板,讀取卡片的開始日、結束日與成員,並匯出 Excel 或 PDF。</p></header>
+<header><h1>Trello 甘特圖</h1><p>選看板、依成員篩選,點卡片即可改日期與留言,也可匯出 Excel 或 PDF。</p></header>
 
-<section class="panel">
-  <h2>1. 連線 Trello</h2>
+<details class="panel" id="d1" open>
+  <summary>1. 連線 Trello<span class="sm" id="s1"></span></summary>
   <div class="row2">
     <label class="f">API Key<input type="text" id="key" autocomplete="off"></label>
     <label class="f">Token<input type="password" id="token" autocomplete="off"></label>
     <button id="load">載入看板</button>
   </div>
-  <div class="msg" id="m1">金鑰只會存在這台電腦的瀏覽器,不會傳到其他地方。</div>
-</section>
+  <div class="msg" id="m1">要修改日期與留言,Token 需有寫入權限(scope=read,write)。金鑰只存在這個瀏覽器。</div>
+</details>
 
-<section class="panel" id="p2" hidden>
-  <h2>2. 選擇看板</h2>
+<details class="panel" id="d2" hidden>
+  <summary>2. 選擇看板<span class="sm" id="s2"></span></summary>
   <div id="boards"></div>
   <button id="gen">產生甘特圖</button>
   <div class="msg" id="m2"></div>
-</section>
+</details>
 
 <section class="panel" id="p3" hidden>
   <div class="bar-act">
-    <h2 style="margin:0">3. 甘特圖</h2>
+    <div class="row2">
+      <label class="f">顯示成員<select id="mf"></select></label>
+    </div>
     <div class="row2"><button class="sec" id="xl">匯出 Excel</button><button class="sec" id="pdf">匯出 PDF</button></div>
   </div>
   <div id="wrap"></div>
   <div class="legend" id="legend"></div>
 </section>
 
+<dialog id="dlg">
+  <div class="dh"><b id="dt"></b><button class="x" id="dx" aria-label="關閉">✕</button></div>
+  <div class="sub" id="di"></div>
+  <div class="row2">
+    <label class="f">開始日期<input type="date" id="ds"></label>
+    <label class="f">結束日期<input type="date" id="de"></label>
+    <button id="dsave">儲存日期</button>
+    <a id="dl" target="_blank" rel="noopener">在 Trello 開啟</a>
+  </div>
+  <div class="msg" id="dmsg"></div>
+  <h3>留言</h3>
+  <div id="cm"></div>
+  <textarea id="nc" placeholder="輸入新留言…"></textarea>
+  <div class="row2" style="margin-top:8px"><button id="cadd">送出留言</button><span class="msg" id="cmsg" style="margin:0"></span></div>
+</dialog>
+
 <script>
 const $=id=>document.getElementById(id), API='https://api.trello.com/1', TZ=8*3600e3, DW=26;
 const COLORS=['#1f6f78','#c2562e','#5b6ee1','#7a9a2e','#b0408a','#d19a1c','#3f7fbf','#8a5a44'];
-let auth='', rows=[], boardsData=[];
+let rows=[], boardsData=[], picked=[], me='', cur=null;
 try{$('key').value=localStorage.getItem('tg_key')||'';$('token').value=localStorage.getItem('tg_token')||''}catch(e){}
 
 const dayOf=iso=>Math.floor((new Date(iso).getTime()+TZ)/864e5);
 const fmt=d=>new Date(d*864e5).toISOString().slice(0,10);
+const msOfDay=(iso,def)=>iso?((new Date(iso).getTime()+TZ)%864e5):def;
+const mkIso=(str,ms)=>new Date(Date.parse(str+'T00:00:00Z')+ms-TZ).toISOString();
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const when=iso=>new Date(iso).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+const wErr=e=>(e.status===401||e.status===403)?'權限不足:請用 scope=read,write 重新產生 Token。':'失敗:'+e.message;
 
-async function api(path,params={}){
+async function api(path,params={},method='GET'){
   const q=new URLSearchParams({...params,key:$('key').value.trim(),token:$('token').value.trim()});
-  const r=await fetch(`${API}${path}?${q}`);
-  if(!r.ok) throw new Error(`Trello 回應 ${r.status}:${(await r.text()).slice(0,80)}`);
+  const r=await fetch(`${API}${path}?${q}`,{method});
+  if(!r.ok){const e=new Error(`Trello ${r.status} ${(await r.text()).slice(0,60)}`);e.status=r.status;throw e}
   return r.json();
 }
+function setDates(r){
+  r.hasStart=!!r.startIso;r.hasDue=!!r.dueIso;
+  const s=dayOf(r.startIso||r.dueIso),e=dayOf(r.dueIso||r.startIso);r.s=Math.min(s,e);r.e=Math.max(s,e);
+}
+const vis=()=>{const f=$('mf').value;return rows.filter(r=>!f||(f==='__none'?!r.mem.length:r.mem.includes(f)))};
 
 $('load').onclick=async()=>{
   $('m1').className='msg';$('m1').textContent='讀取中…';
   try{
-    boardsData=(await api('/members/me/boards',{fields:'name,closed'})).filter(b=>!b.closed);
+    const [bs,m]=await Promise.all([api('/members/me/boards',{fields:'name,closed'}),api('/members/me',{fields:'id'})]);
+    me=m.id;boardsData=bs.filter(b=>!b.closed);
     try{localStorage.setItem('tg_key',$('key').value.trim());localStorage.setItem('tg_token',$('token').value.trim())}catch(e){}
     $('boards').innerHTML=boardsData.map((b,i)=>`<label><input type="checkbox" value="${i}"> ${esc(b.name)}</label>`).join('');
-    $('p2').hidden=false;$('m1').textContent=`找到 ${boardsData.length} 個看板。`;
-  }catch(e){$('m1').className='msg err';$('m1').textContent='無法載入看板,請確認 API Key 與 Token 是否正確。'+e.message}
+    $('d2').hidden=false;$('d2').open=true;$('d1').open=false;$('s1').textContent=`已連線 · ${boardsData.length} 個看板`;
+  }catch(e){$('m1').className='msg err';$('m1').textContent='無法載入看板,請確認 API Key 與 Token。'+e.message}
 };
 
 $('gen').onclick=async()=>{
-  const picked=[...document.querySelectorAll('#boards input:checked')].map(i=>boardsData[+i.value]);
+  picked=[...document.querySelectorAll('#boards input:checked')].map(i=>boardsData[+i.value]);
   if(!picked.length){$('m2').className='msg err';$('m2').textContent='請至少勾選一個看板。';return}
   $('m2').className='msg';$('m2').textContent='讀取卡片中…';
   rows=[];let skipped=0;
@@ -116,24 +155,29 @@ $('gen').onclick=async()=>{
       const ln=Object.fromEntries(lists.map(l=>[l.id,l.name]));
       for(const c of cards){
         if(!c.start&&!c.due){skipped++;continue}
-        const s=dayOf(c.start||c.due), e=dayOf(c.due||c.start);
-        rows.push({board:b.name,bi,list:ln[c.idList]||'',name:c.name,s:Math.min(s,e),e:Math.max(s,e),
-          done:!!c.dueComplete,members:(c.members||[]).map(m=>m.fullName).join('、'),url:c.url,
-          hasStart:!!c.start,hasDue:!!c.due});
+        const r={id:c.id,board:b.name,bi,list:ln[c.idList]||'',name:c.name,startIso:c.start,dueIso:c.due,done:!!c.dueComplete,
+          mem:(c.members||[]).map(m=>m.fullName),url:c.url};
+        setDates(r);rows.push(r);
       }
       await new Promise(r=>setTimeout(r,150));
     }
-    $('m2').textContent=`共 ${rows.length} 張卡片有日期${skipped?`(另有 ${skipped} 張沒有任何日期,已略過)`:''}。`;
-    if(rows.length){draw(picked);$('p3').hidden=false}
+    rows.forEach((r,i)=>r.i=i);
+    const names=[...new Set(rows.flatMap(r=>r.mem))].sort();
+    $('mf').innerHTML='<option value="">全部成員</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__none">未指派</option>';
+    $('s2').textContent=`已選 ${picked.length} 個看板 · ${rows.length} 張卡片`+(skipped?`(略過 ${skipped} 張無日期)`:'');
+    $('m2').textContent='';
+    if(rows.length){draw();$('p3').hidden=false;$('d2').open=false}else{$('m2').textContent='所選看板沒有任何含日期的卡片。'}
   }catch(e){$('m2').className='msg err';$('m2').textContent='讀取卡片失敗。'+e.message}
 };
+$('mf').onchange=()=>draw();
 
-function draw(picked){
-  const min=Math.min(...rows.map(r=>r.s))-2, max=Math.max(...rows.map(r=>r.e))+3, n=max-min+1, W=n*DW;
-  const today=dayOf(new Date().toISOString());
-  let months='',days='',off=0;
+function draw(){
+  const V=vis();
+  if(!V.length){$('wrap').innerHTML='<div class="msg" style="padding:16px">這位成員沒有符合的卡片。</div>';$('legend').innerHTML='';return}
+  const min=Math.min(...V.map(r=>r.s))-2,max=Math.max(...V.map(r=>r.e))+3,n=max-min+1,W=n*DW,today=dayOf(new Date().toISOString());
+  let months='',days='';
   for(let d=min;d<=max;d++){
-    const dt=new Date(d*864e5), x=(d-min)*DW, wk=[0,6].includes(dt.getUTCDay());
+    const dt=new Date(d*864e5),x=(d-min)*DW,wk=[0,6].includes(dt.getUTCDay());
     days+=`<div class="cell ${wk?'wk':''}" style="left:${x}px;width:${DW}px">${dt.getUTCDate()}</div>`;
     if(dt.getUTCDate()===1||d===min){
       const len=Math.min(new Date(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth()+1,0)).getUTCDate()-dt.getUTCDate()+1,max-d+1);
@@ -142,17 +186,17 @@ function draw(picked){
   }
   const tl=today>=min&&today<=max?`<div class="today" style="left:${(today-min)*DW+DW/2}px"></div>`:'';
   const bg=`background-image:repeating-linear-gradient(90deg,transparent 0 ${DW-1}px,#eef1f4 ${DW-1}px ${DW}px)`;
-  let h=`<div class="g"><div class="r hd"><div class="lab">卡片</div><div class="track" style="width:${W}px">${months}</div></div>
+  let h=`<div class="g"><div class="r hd"><div class="lab">卡片(點擊可編輯)</div><div class="track" style="width:${W}px">${months}</div></div>
   <div class="r hd"><div class="lab">成員</div><div class="track" style="width:${W}px">${days}</div></div>`;
   picked.forEach((b,bi)=>{
-    const list=rows.filter(r=>r.bi===bi).sort((a,b)=>a.s-b.s||a.e-b.e);
+    const list=V.filter(r=>r.bi===bi).sort((a,b)=>a.s-b.s||a.e-b.e);
     if(!list.length)return;
     h+=`<div class="r bd"><div class="lab"><span class="n">${esc(b.name)}</span></div><div class="track" style="width:${W}px"></div></div>`;
     for(const r of list){
-      const late=!r.done&&r.hasDue&&r.e<today, c=COLORS[bi%COLORS.length];
-      const tip=`${r.name}\n${fmt(r.s)} ~ ${fmt(r.e)}\n${r.members||'無成員'}`;
-      h+=`<div class="r"><div class="lab" title="${esc(tip)}"><span class="n">${esc(r.name)}</span><span class="m">${esc(r.members)}</span></div>
-      <div class="track" style="width:${W}px;${bg}">${tl}<div class="bar ${r.done?'done':''} ${late?'late':''}" title="${esc(tip)}"
+      const late=!r.done&&r.hasDue&&r.e<today,c=COLORS[bi%COLORS.length],mem=r.mem.join('、');
+      const tip=`${r.name}\n${fmt(r.s)} ~ ${fmt(r.e)}\n${mem||'無成員'}`;
+      h+=`<div class="r"><div class="lab" data-i="${r.i}" title="${esc(tip)}"><span class="n">${esc(r.name)}</span><span class="m">${esc(mem)}</span></div>
+      <div class="track" style="width:${W}px;${bg}">${tl}<div class="bar ${r.done?'done':''} ${late?'late':''}" data-i="${r.i}" title="${esc(tip)}"
       style="left:${(r.s-min)*DW}px;width:${(r.e-r.s+1)*DW}px;background:${c}"></div></div></div>`;
     }
   });
@@ -160,29 +204,77 @@ function draw(picked){
   $('legend').innerHTML=picked.map((b,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(b.name)}</span>`).join('')
    +'<span><i style="background:#999;opacity:.4"></i>已完成</span><span><i style="outline:2px solid #c0392b;background:#fff"></i>已逾期</span><span><i style="background:#e8a33d"></i>今天</span>';
 }
+$('wrap').onclick=e=>{const t=e.target.closest('[data-i]');if(t)openCard(+t.dataset.i)};
 
+/* ---- 卡片視窗 ---- */
+function openCard(i){
+  cur=rows[i];$('dt').textContent=cur.name;
+  $('di').textContent=`${cur.board} › ${cur.list}`+(cur.mem.length?` · ${cur.mem.join('、')}`:' · 無成員');
+  $('ds').value=cur.startIso?fmt(dayOf(cur.startIso)):'';$('de').value=cur.dueIso?fmt(dayOf(cur.dueIso)):'';
+  $('dl').href=cur.url;$('dmsg').textContent='';$('cmsg').textContent='';$('nc').value='';
+  $('dlg').showModal();loadComments();
+}
+$('dx').onclick=()=>$('dlg').close();
+$('dsave').onclick=async()=>{
+  const s=$('ds').value,d=$('de').value,m=$('dmsg');m.className='msg';
+  if(!s&&!d){m.className='msg err';m.textContent='至少要保留一個日期。';return}
+  if(s&&d&&s>d){m.className='msg err';m.textContent='開始日期不能晚於結束日期。';return}
+  const sIso=s?mkIso(s,msOfDay(cur.startIso,9*3600e3)):null,dIso=d?mkIso(d,msOfDay(cur.dueIso,18*3600e3)):null;
+  m.textContent='儲存中…';
+  try{
+    await api(`/cards/${cur.id}`,{start:sIso??'null',due:dIso??'null'},'PUT');
+    cur.startIso=sIso;cur.dueIso=dIso;setDates(cur);draw();m.className='msg ok';m.textContent='已儲存。';
+  }catch(e){m.className='msg err';m.textContent=wErr(e)}
+};
+
+async function loadComments(){
+  const box=$('cm');box.textContent='載入中…';
+  try{
+    const a=await api(`/cards/${cur.id}/actions`,{filter:'commentCard'});
+    box.innerHTML=a.map(x=>`<div class="c" data-id="${x.id}"><div class="ch"><b>${esc(x.memberCreator?.fullName||'')}</b> · ${when(x.date)}
+      ${x.idMemberCreator===me?'<button class="lk" data-act="edit">編輯</button>':''}</div><div class="ct">${esc(x.data.text)}</div></div>`).join('')||'<div class="msg">尚無留言</div>';
+  }catch(e){box.innerHTML=`<div class="msg err">${esc('留言讀取失敗。'+e.message)}</div>`}
+}
+$('cm').onclick=async e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const c=b.closest('.c'),ct=c.querySelector('.ct');
+  if(b.dataset.act==='edit'){
+    const t=ct.textContent;ct.innerHTML='<textarea></textarea><div class="row2" style="margin-top:6px"><button data-act="save">儲存</button><button class="sec" data-act="cancel">取消</button></div>';
+    ct.querySelector('textarea').value=t;
+  }else if(b.dataset.act==='cancel'){loadComments()}
+  else if(b.dataset.act==='save'){
+    const text=ct.querySelector('textarea').value.trim();if(!text)return;
+    try{await api(`/cards/${cur.id}/actions/${c.dataset.id}/comments`,{text},'PUT');loadComments()}
+    catch(err){alert(wErr(err))}
+  }
+};
+$('cadd').onclick=async()=>{
+  const text=$('nc').value.trim(),m=$('cmsg');if(!text)return;
+  m.className='msg';m.textContent='送出中…';
+  try{await api(`/cards/${cur.id}/actions/comments`,{text},'POST');$('nc').value='';m.textContent='';loadComments()}
+  catch(e){m.className='msg err';m.textContent=wErr(e)}
+};
+
+/* ---- 匯出 ---- */
 $('xl').onclick=()=>{
-  const data=rows.map(r=>({看板:r.board,列表:r.list,卡片:r.name,開始日期:r.hasStart?fmt(r.s):'',結束日期:r.hasDue?fmt(r.e):'',
-    天數:r.e-r.s+1,已完成:r.done?'是':'否',成員:r.members,連結:r.url}));
-  const ws=XLSX.utils.json_to_sheet(data);
-  ws['!cols']=[18,14,36,12,12,6,8,20,40].map(w=>({wch:w}));
+  const data=vis().map(r=>({看板:r.board,列表:r.list,卡片:r.name,開始日期:r.hasStart?fmt(dayOf(r.startIso)):'',結束日期:r.hasDue?fmt(dayOf(r.dueIso)):'',
+    天數:r.e-r.s+1,已完成:r.done?'是':'否',成員:r.mem.join('、'),連結:r.url}));
+  const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[18,14,36,12,12,6,8,20,40].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'卡片排程');
   XLSX.writeFile(wb,`trello-gantt-${fmt(dayOf(new Date().toISOString()))}.xlsx`);
 };
-
 $('pdf').onclick=async()=>{
   const btn=$('pdf');btn.disabled=true;btn.textContent='產生中…';
   const w=$('wrap');w.classList.add('exporting');
   try{
     const el=w.firstElementChild;
     const cv=await html2canvas(el,{scale:1.5,backgroundColor:'#fff',width:el.scrollWidth,windowWidth:el.scrollWidth+50});
-    const {jsPDF}=window.jspdf, pdf=new jsPDF('l','pt','a3');
-    const PW=pdf.internal.pageSize.getWidth(), PH=pdf.internal.pageSize.getHeight(), M=24;
-    const k=(PW-2*M)/cv.width, sliceH=Math.floor((PH-2*M)/k);
+    const {jsPDF}=window.jspdf,pdf=new jsPDF('l','pt','a3');
+    const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight(),M=24;
+    const k=(PW-2*M)/cv.width,sliceH=Math.floor((PH-2*M)/k);
     for(let y=0,p=0;y<cv.height;y+=sliceH,p++){
-      const h=Math.min(sliceH,cv.height-y), part=document.createElement('canvas');
-      part.width=cv.width;part.height=h;
-      part.getContext('2d').drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      const h=Math.min(sliceH,cv.height-y),part=document.createElement('canvas');
+      part.width=cv.width;part.height=h;part.getContext('2d').drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
       if(p)pdf.addPage();
       pdf.addImage(part.toDataURL('image/png'),'PNG',M,M,cv.width*k,h*k);
     }
