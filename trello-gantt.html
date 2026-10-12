@@ -9,8 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-:root{--bg:#f4f6f8;--card:#fff;--ink:#1c2630;--mute:#6b7785;--line:#e3e8ee;--acc:#1f6f78;--accon:#fff;--s2:#eef2f5;--hd:#fafbfc;--hov:#f1f7f8;--chip:#e6eef0;--grid:#eef1f4;--wk:rgba(0,0,0,.035);--inp:#fff;--cbg:#f6f8fa;--err:#b3261e;--ok:#1d7a46;--late:#c0392b;--bk:rgba(20,30,40,.4);color-scheme:light}
-html[data-theme=dark]{--bg:#12171d;--card:#1a2129;--ink:#e6ebf0;--mute:#93a1b0;--line:#2b3540;--acc:#4fb3bf;--accon:#0d1a1d;--s2:#222c36;--hd:#1e262f;--hov:#243241;--chip:#2b3a46;--grid:#242d37;--wk:rgba(255,255,255,.04);--inp:#141a21;--cbg:#222b35;--err:#ff8a80;--ok:#6fd09a;--late:#ff6b5b;--bk:rgba(0,0,0,.6);color-scheme:dark}
+:root,[data-theme=light]{--bg:#f4f6f8;--card:#fff;--ink:#1c2630;--mute:#6b7785;--line:#e3e8ee;--acc:#1f6f78;--accon:#fff;--s2:#eef2f5;--hd:#fafbfc;--hov:#f1f7f8;--chip:#e6eef0;--grid:#eef1f4;--wk:rgba(0,0,0,.035);--inp:#fff;--cbg:#f6f8fa;--err:#b3261e;--ok:#1d7a46;--late:#c0392b;--bk:rgba(20,30,40,.4);color-scheme:light}
+[data-theme=dark]{--bg:#12171d;--card:#1a2129;--ink:#e6ebf0;--mute:#93a1b0;--line:#2b3540;--acc:#4fb3bf;--accon:#0d1a1d;--s2:#222c36;--hd:#1e262f;--hov:#243241;--chip:#2b3a46;--grid:#242d37;--wk:rgba(255,255,255,.04);--inp:#141a21;--cbg:#222b35;--err:#ff8a80;--ok:#6fd09a;--late:#ff6b5b;--bk:rgba(0,0,0,.6);color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
 header{padding:20px 28px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
@@ -40,6 +40,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #wrap.exporting{overflow:visible;max-height:none}
 #wrap.exporting .lab{position:static}
 .g{display:inline-block;min-width:100%}
+#xw{position:absolute;left:-100000px;top:0;background:var(--card);color:var(--ink)}
+.exp .lab{position:static}.exp .track{overflow:hidden}
 .r{display:flex;height:30px;border-bottom:1px solid var(--line)}
 .lab{position:sticky;left:0;z-index:6;flex:none;width:380px;background:var(--card);border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
 .lab[data-i]{cursor:pointer}.lab[data-i]:hover{background:var(--hov)}
@@ -145,14 +147,32 @@ dialog h3{font-size:14px;margin:18px 0 8px}
   <div class="row2" style="margin-top:8px"><button id="cadd">送出留言</button><span class="msg" id="cmsg" style="margin:0"></span></div>
 </dialog>
 
+<dialog id="pd">
+  <div class="dh"><b>匯出 PDF</b><button class="x" id="px" aria-label="關閉">✕</button></div>
+  <div class="sub">選擇要列出的時間區間,預設為今天起往後一個月。</div>
+  <div class="row2">
+    <label class="f">開始日期<input type="date" id="ps"></label>
+    <label class="f">結束日期<input type="date" id="pe"></label>
+  </div>
+  <div class="row2" style="margin-top:12px">
+    <label class="f">紙張<select id="pp"><option value="a4">A4</option><option value="a3">A3</option></select></label>
+    <label class="f">方向<select id="po"><option value="l">橫式</option><option value="p">直式</option></select></label>
+    <label class="f">內容大小<select id="pz"><option value=".9">大(最清楚)</option><option value=".75" selected>標準</option><option value=".6">小(每頁放更多)</option></select></label>
+  </div>
+  <label class="ck" style="margin-top:8px"><input type="checkbox" id="pn"> 包含無日期卡片</label>
+  <div class="hint">目前的成員篩選與「顯示列表」設定會一併套用。內容較多時會自動分成多頁,每頁都重複卡片欄與日期標題,文字大小維持清楚易讀。</div>
+  <div class="row2"><button id="pgo">產生 PDF</button><button class="sec" id="pcl">取消</button></div>
+  <div class="msg" id="pm"></div>
+</dialog>
+
 <script>
 const $=id=>document.getElementById(id), API='https://api.trello.com/1', TZ=8*3600e3, H=3600e3;
 const COLORS=['#1f6f78','#c2562e','#5b6ee1','#7a9a2e','#b0408a','#d19a1c','#3f7fbf','#8a5a44'];
 const SCALES={day:26,month:6,year:1.5};
-let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},collapsed=new Set(),me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null;
+let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},collapsed=new Set(),me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null,LIGHT=false;
 try{$('key').value=localStorage.getItem('tg_key')||'';$('token').value=localStorage.getItem('tg_token')||''}catch(e){}
 
-const tint=(hex,f)=>{const n=parseInt(hex.slice(1),16),dk=document.documentElement.dataset.theme==='dark',b=dk?[26,33,41]:[255,255,255],k=dk?Math.min(1,f*1.6):f,m=(v,i)=>Math.round(b[i]+(v-b[i])*k);return `rgb(${m(n>>16,0)},${m(n>>8&255,1)},${m(n&255,2)})`};
+const tint=(hex,f)=>{const n=parseInt(hex.slice(1),16),dk=!LIGHT&&document.documentElement.dataset.theme==='dark',b=dk?[26,33,41]:[255,255,255],k=dk?Math.min(1,f*1.6):f,m=(v,i)=>Math.round(b[i]+(v-b[i])*k);return `rgb(${m(n>>16,0)},${m(n>>8&255,1)},${m(n&255,2)})`};
 const nowIso=()=>new Date().toISOString();
 const dayOf=iso=>Math.floor((new Date(iso).getTime()+TZ)/864e5);
 const fmt=d=>new Date(d*864e5).toISOString().slice(0,10);
@@ -174,8 +194,8 @@ function setDates(r){
   if(!r.startIso&&!r.dueIso){r.s=r.e=null;return}
   const s=dayOf(r.startIso||r.dueIso),e=dayOf(r.dueIso||r.startIso);r.s=Math.min(s,e);r.e=Math.max(s,e);
 }
-const vis=()=>{
-  const f=$('mf').value,nd=$('fnd').checked,nm=$('fnm').checked;
+const vis=ndo=>{
+  const f=$('mf').value,nd=ndo===undefined?$('fnd').checked:ndo,nm=$('fnm').checked;
   return rows.filter(r=>(nd||r.s!=null)&&(nm||r.members.length)&&(!f||(f==='__none'?!r.members.length:r.members.some(m=>m.name===f))));
 };
 
@@ -252,6 +272,12 @@ function draw(keep){
   const dated=V.filter(r=>r.s!=null);
   const lo=Math.min(today,...dated.map(r=>r.s)),hi=Math.max(today,...dated.map(r=>r.e));
   rng={min:lo-3,max:Math.max(hi+3,today+Math.ceil(2000/PPD)),today};
+  w.innerHTML=build(V,today);
+  $('legend').innerHTML=picked.map((b,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(b.name)}</span>`).join('')
+   +'<span><i style="background:#999;opacity:.4"></i>已完成</span><span><i style="outline:2px solid var(--late);background:var(--card)"></i>已逾期</span><span><i style="background:#e8a33d"></i>今天</span>';
+  if(keep){w.scrollLeft=sl;w.scrollTop=st}else{goToday();w.scrollTop=0}
+}
+function build(V,today,ex){
   const W=(rng.max-rng.min+1)*PPD;
   let top,bot='';
   if(PPD===26){
@@ -270,29 +296,27 @@ function draw(keep){
     const late=!r.done&&r.hasDue&&r.e<today;
     const bar=r.s==null?'':`<div class="bar ${r.done?'done':''} ${late?'late':''}" style="left:${(r.s-rng.min)*PPD}px;width:${(r.e-r.s+1)*PPD}px;background:${COLORS[bi%COLORS.length]}"></div>`;
     const c0=COLORS[bi%COLORS.length];
-    return `<div class="r ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c0,.45)}"><div class="lab" data-i="${r.i}" title="${esc(tip)}">${grp?`<span class="gp" data-gp="${r.i}" title="拖曳以移動或排序">⋮⋮</span>`:''}<span class="n">${esc(r.name)}</span>${grp?'':`<span class="lchip" title="${esc(r.list)}">${esc(r.list)}</span>`}
+    return `<div class="r ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c0,.45)}"><div class="lab" data-i="${r.i}" title="${esc(tip)}">${grp&&!ex?`<span class="gp" data-gp="${r.i}" title="拖曳以移動或排序">⋮⋮</span>`:''}<span class="n">${esc(r.name)}</span>${grp?'':`<span class="lchip" title="${esc(r.list)}">${esc(r.list)}</span>`}
       <span class="mm">${r.members.map(m=>`<span class="chip">${esc(m.name)}</span>`).join('')}</span></div>
       <div class="track" data-ti="${r.i}" style="width:${W}px;${bg}">${tl}${bar}</div></div>`;
   };
   const cmp=(a,b)=>(a.s??1e9)-(b.s??1e9)||(a.e??1e9)-(b.e??1e9);
   picked.forEach((b,bi)=>{
     const bl=V.filter(r=>r.bi===bi);if(!bl.length)return;
-    h+=`<div class="r bd"><div class="lab"><span class="n">${esc(b.name)}</span><label class="lt"><input type="checkbox" data-bl="${bi}" ${showList[bi]?'checked':''}> 顯示列表</label></div><div ${tr}></div></div>`;
+    h+=`<div class="r bd"><div class="lab"><span class="n">${esc(b.name)}</span>${ex?'':`<label class="lt"><input type="checkbox" data-bl="${bi}" ${showList[bi]?'checked':''}> 顯示列表</label>`}</div><div ${tr}></div></div>`;
     if(showList[bi]){
       const known=new Set(boardLists[bi].map(l=>l.id));
       const groups=boardLists[bi].map(l=>({id:l.id,name:l.name,rs:bl.filter(r=>r.idList===l.id)}));
       const oth=bl.filter(r=>!known.has(r.idList));if(oth.length)groups.push({id:'',name:'(其他)',rs:oth});
       const c=COLORS[bi%COLORS.length],bgc=tint(c,.14);
       groups.forEach(g=>{
-        const key=`${bi}:${g.id||'_'}`,off=collapsed.has(key),tot=rows.filter(r=>r.bi===bi&&(g.id?r.idList===g.id:!known.has(r.idList))).length,cnt=g.rs.length+(tot!==g.rs.length?' / '+tot:'');
-        h+=`<div class="r lr" data-lid="${g.id}" data-bi="${bi}" data-key="${key}" title="點擊${off?'展開':'收合'}" style="--bc:${c};background:${bgc}"><div class="lab" style="background:${bgc}"><span class="arr">${off?'▶':'▼'}</span><span class="ltag">列表</span><span class="n">${esc(g.name)}</span><span class="cnt" title="顯示中的卡片數(有篩選時為「顯示中 / 列表總數」)">${cnt}</span></div><div ${tr}></div></div>`;
+        if(ex&&!g.rs.length)return;
+        const key=`${bi}:${g.id||'_'}`,off=!ex&&collapsed.has(key),tot=rows.filter(r=>r.bi===bi&&(g.id?r.idList===g.id:!known.has(r.idList))).length,cnt=ex?g.rs.length:g.rs.length+(tot!==g.rs.length?' / '+tot:'');
+        h+=`<div class="r lr" data-lid="${g.id}" data-bi="${bi}" data-key="${key}" title="點擊${off?'展開':'收合'}" style="--bc:${c};background:${bgc}"><div class="lab" style="background:${bgc}">${ex?'':`<span class="arr">${off?'▶':'▼'}</span>`}<span class="ltag">列表</span><span class="n">${esc(g.name)}</span><span class="cnt" title="顯示中的卡片數(有篩選時為「顯示中 / 列表總數」)">${cnt}</span></div><div ${tr}></div></div>`;
         if(!off)g.rs.sort((a,b)=>a.pos-b.pos).forEach(r=>h+=cardRow(r,bi,true))});
     }else bl.sort(cmp).forEach(r=>h+=cardRow(r,bi,false));
   });
-  w.innerHTML=h+'</div>';
-  $('legend').innerHTML=picked.map((b,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(b.name)}</span>`).join('')
-   +'<span><i style="background:#999;opacity:.4"></i>已完成</span><span><i style="outline:2px solid var(--late);background:var(--card)"></i>已逾期</span><span><i style="background:#e8a33d"></i>今天</span>';
-  if(keep){w.scrollLeft=sl;w.scrollTop=st}else{goToday();w.scrollTop=0}
+  return h+'</div>';
 }
 $('wrap').onclick=e=>{
   if(e.target.closest('[data-today]')){goToday();return}
@@ -455,26 +479,55 @@ $('xl').onclick=()=>{
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'卡片排程');
   XLSX.writeFile(wb,`trello-gantt-${fmt(dayOf(nowIso()))}.xlsx`);
 };
-$('pdf').onclick=async()=>{
-  const btn=$('pdf');btn.disabled=true;btn.textContent='產生中…';
-  const w=$('wrap'),prev=document.documentElement.dataset.theme;
-  if(prev==='dark'){document.documentElement.dataset.theme='light';draw(true)}
-  w.classList.add('exporting');
+$('pdf').onclick=()=>{
+  const t=dayOf(nowIso()),d=new Date(t*864e5),y=d.getUTCFullYear(),mo=d.getUTCMonth(),dd=d.getUTCDate();
+  $('ps').value=fmt(t);
+  $('pe').value=new Date(Date.UTC(y,mo+1,Math.min(dd,new Date(Date.UTC(y,mo+2,0)).getUTCDate()))).toISOString().slice(0,10);
+  $('pm').textContent='';$('pm').className='msg';$('pn').checked=false;$('pd').showModal();
+};
+$('px').onclick=$('pcl').onclick=()=>$('pd').close();
+$('pgo').onclick=async()=>{
+  const m=$('pm'),btn=$('pgo'),ss=$('ps').value,ee=$('pe').value,fail=t=>{m.className='msg err';m.textContent=t};
+  m.className='msg';
+  if(!ss||!ee||ss>ee)return fail('請選擇正確的日期區間(開始不能晚於結束)。');
+  const s0=Date.parse(ss)/864e5,e0=Date.parse(ee)/864e5,days=e0-s0+1,k=parseFloat($('pz').value);
+  const V=vis($('pn').checked).filter(r=>r.s==null||(r.e>=s0&&r.s<=e0));
+  if(!V.length)return fail('這個區間沒有符合條件的卡片。');
+  const ppd=days<=62?26:days<=400?8:2,labW=380,M=24,FT=14;
+  const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:$('po').value==='l'?'landscape':'portrait',unit:'pt',format:$('pp').value});
+  const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight();
+  const chunk=Math.max(5,Math.floor(((PW-2*M)/k-labW)/ppd)),nChunk=Math.ceil(days/chunk);
+  if(nChunk>40)return fail(`區間太長(至少 ${nChunk} 個橫向分頁),請縮短區間、改用 A3 或選「小」。`);
+  btn.disabled=true;btn.textContent='產生中…';m.textContent='處理中,請稍候…';
+  const saved={rng:{...rng},ppd:PPD},today=dayOf(nowIso()),pages=[];
+  const xw=document.createElement('div');xw.id='xw';xw.className='exp';xw.dataset.theme='light';document.body.appendChild(xw);
   try{
-    const el=w.firstElementChild;
-    const cv=await html2canvas(el,{scale:1.5,backgroundColor:'#fff',width:el.scrollWidth,windowWidth:el.scrollWidth+50});
-    const {jsPDF}=window.jspdf,pdf=new jsPDF('l','pt','a3');
-    const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight(),M=24;
-    const k=(PW-2*M)/cv.width,sliceH=Math.floor((PH-2*M)/k);
-    for(let y=0,p=0;y<cv.height;y+=sliceH,p++){
-      const h=Math.min(sliceH,cv.height-y),part=document.createElement('canvas');
-      part.width=cv.width;part.height=h;part.getContext('2d').drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
-      if(p)pdf.addPage();
-      pdf.addImage(part.toDataURL('image/png'),'PNG',M,M,cv.width*k,h*k);
+    for(let c=0;c<nChunk;c++){
+      const cs=s0+c*chunk,ce=Math.min(e0,cs+chunk-1);
+      rng={min:cs,max:ce,today};PPD=ppd;LIGHT=true;
+      try{xw.innerHTML=build(V,today,true)}finally{rng=saved.rng;PPD=saved.ppd;LIGHT=false}
+      const wpx=labW+(ce-cs+1)*ppd;xw.style.width=wpx+'px';
+      const hpx=xw.firstElementChild.offsetHeight,sc=Math.min(2,30000/hpx);
+      const cv=await html2canvas(xw,{scale:sc,backgroundColor:'#fff',width:wpx,height:hpx,windowWidth:wpx+50,windowHeight:hpx+50,scrollX:0,scrollY:0,
+        onclone:d=>{d.getElementById('xw').style.left='0'}});
+      const rowsAll=Math.round((hpx-48)/30),rpp=Math.max(3,Math.floor(((PH-2*M-FT)/k-48)/30)),rs=cv.width/wpx;
+      for(let i=0;i<rowsAll;i+=rpp){
+        const n=Math.min(rpp,rowsAll-i),pc=document.createElement('canvas');
+        pc.width=cv.width;pc.height=Math.ceil((48+n*30)*rs);
+        const g=pc.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,pc.width,pc.height);
+        g.drawImage(cv,0,0,cv.width,48*rs,0,0,cv.width,48*rs);
+        g.drawImage(cv,0,(48+i*30)*rs,cv.width,n*30*rs,0,48*rs,cv.width,n*30*rs);
+        if(pages.length)pdf.addPage();
+        pdf.addImage(pc.toDataURL('image/png'),'PNG',M,M,wpx*k,(48+n*30)*k);
+        pages.push({cs,ce});
+      }
     }
-    pdf.save(`trello-gantt-${fmt(dayOf(nowIso()))}.pdf`);
-  }catch(e){alert('PDF 匯出失敗:'+e.message)}
-  finally{w.classList.remove('exporting');if(prev==='dark'){document.documentElement.dataset.theme='dark';draw(true)}btn.disabled=false;btn.textContent='匯出 PDF'}
+    pages.forEach((p,i)=>{pdf.setPage(i+1);pdf.setFontSize(8);pdf.setTextColor(120);
+      pdf.text(`Page ${i+1} / ${pages.length}    ${fmt(p.cs)} ~ ${fmt(p.ce)}`,M,PH-M/2)});
+    pdf.save(`trello-gantt-${ss}_${ee}.pdf`);
+    m.className='msg ok';m.textContent=`已產生 ${pages.length} 頁。`;
+  }catch(err){fail('PDF 匯出失敗:'+err.message)}
+  finally{xw.remove();btn.disabled=false;btn.textContent='產生 PDF'}
 };
 </script>
 </body>
