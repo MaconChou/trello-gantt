@@ -40,12 +40,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .lab{position:sticky;left:0;z-index:6;flex:none;width:380px;background:#fff;border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
 .lab[data-i]{cursor:pointer}.lab[data-i]:hover{background:#f1f7f8}
 .lab .n{overflow:hidden;text-overflow:ellipsis;flex:1}
-.nd .n{color:var(--mute);font-style:italic}
 .mm{display:flex;gap:3px;max-width:190px;overflow:hidden;flex:none}
 .chip{display:inline-flex;align-items:center;gap:2px;background:#e6eef0;border-radius:10px;padding:0 7px;font-size:11px;white-space:nowrap}
 .bd{background:#eef2f5;font-weight:600}.bd .lab{background:#eef2f5}
 label.lt{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);display:flex;gap:4px;align-items:center}
-.lr{background:#f8fafb;font-size:12px;color:var(--mute)}.lr .lab{background:#f8fafb;padding-left:22px}
+.lr .lab{font-weight:600;font-size:13px;border-left:4px solid var(--bc)}
+.ltag{flex:none;font-size:10px;font-weight:600;color:#fff;background:var(--bc);border-radius:3px;padding:0 5px}
+.cr .lab{padding-left:34px;border-left:4px solid var(--bt)}
+.gp{flex:none;width:14px;margin-left:-20px;text-align:center;cursor:grab;color:#9aa5b1;touch-action:none;letter-spacing:-2px}
+.lchip{flex:none;max-width:100px;overflow:hidden;text-overflow:ellipsis;font-size:11px;border:1px solid var(--line);border-radius:10px;padding:0 7px;color:var(--mute)}
+#dropline{position:fixed;z-index:49;height:3px;background:#e8a33d;border-radius:2px;display:none;pointer-events:none}
 .hd{height:24px;background:#fafbfc}.hd .lab{background:#fafbfc}
 .track{position:relative;flex:none}
 .cell{position:absolute;top:0;height:100%;font-size:11px;color:var(--mute);text-align:center;border-left:1px solid var(--line);overflow:hidden;white-space:nowrap}
@@ -101,12 +105,12 @@ dialog h3{font-size:14px;margin:18px 0 8px}
     </div>
     <div class="row2"><button class="sec" id="xl">匯出 Excel</button><button class="sec" id="pdf">匯出 PDF</button></div>
   </div>
-  <p class="hint">拖曳色條左右邊緣可調整開始/結束日期,拖曳色條中間可整段移動;在卡片空白處拖曳可新增日期。</p>
+  <p class="hint">拖曳色條左右邊緣可調整開始/結束日期,拖曳色條中間可整段移動;在卡片空白處拖曳可新增日期。開啟「顯示列表」時,拖曳卡片左側的 ⋮⋮ 可移到其他列表或調整順序。</p>
   <div id="gmsg" class="msg"></div>
   <div id="wrap"></div>
   <div class="legend" id="legend"></div>
 </section>
-<div id="tip"></div>
+<div id="tip"></div><div id="dropline"></div>
 
 <dialog id="dlg">
   <div class="dh"><b id="dt"></b><button class="x" id="dx" aria-label="關閉">✕</button></div>
@@ -134,6 +138,7 @@ const SCALES={day:26,month:6,year:1.5};
 let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null;
 try{$('key').value=localStorage.getItem('tg_key')||'';$('token').value=localStorage.getItem('tg_token')||''}catch(e){}
 
+const tint=(hex,f)=>{const n=parseInt(hex.slice(1),16),m=v=>Math.round(255-(255-v)*f);return `rgb(${m(n>>16)},${m(n>>8&255)},${m(n&255)})`};
 const nowIso=()=>new Date().toISOString();
 const dayOf=iso=>Math.floor((new Date(iso).getTime()+TZ)/864e5);
 const fmt=d=>new Date(d*864e5).toISOString().slice(0,10);
@@ -180,13 +185,13 @@ $('gen').onclick=async()=>{
   try{
     for(const [bi,b] of picked.entries()){
       const [cards,lists,mems]=await Promise.all([
-        api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url',members:'true',member_fields:'fullName'}),
+        api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url,pos',members:'true',member_fields:'fullName'}),
         api(`/boards/${b.id}/lists`,{fields:'name'}),
         api(`/boards/${b.id}/members`,{fields:'fullName'})]);
       boardLists[bi]=lists;boardMem[bi]=mems;showList[bi]=true;
       const ln=Object.fromEntries(lists.map(l=>[l.id,l.name]));
       for(const c of cards){
-        const r={id:c.id,board:b.name,bi,idList:c.idList,list:ln[c.idList]||'(其他)',name:c.name,startIso:c.start,dueIso:c.due,
+        const r={id:c.id,board:b.name,bi,idList:c.idList,list:ln[c.idList]||'(其他)',name:c.name,pos:c.pos,startIso:c.start,dueIso:c.due,
           done:!!c.dueComplete,members:(c.members||[]).map(m=>({id:m.id,name:m.fullName})),url:c.url};
         setDates(r);rows.push(r);
       }
@@ -234,11 +239,12 @@ function draw(keep){
   const tr=`class="track" style="width:${W}px"`;
   let h=`<div class="g"><div class="r hd"><div class="lab">卡片 / 成員</div><div ${tr}>${top}<div class="tbadge" data-today style="left:${x}px">今天</div></div></div>
   <div class="r hd"><div class="lab"></div><div ${tr}>${bot}</div></div>`;
-  const cardRow=(r,bi)=>{
+  const cardRow=(r,bi,grp)=>{
     const mem=r.members.map(m=>m.name).join('、'),tip=`${r.name}\n${r.s==null?'無日期':fmt(r.s)+' ~ '+fmt(r.e)}\n${mem||'無成員'}`;
     const late=!r.done&&r.hasDue&&r.e<today;
     const bar=r.s==null?'':`<div class="bar ${r.done?'done':''} ${late?'late':''}" style="left:${(r.s-rng.min)*PPD}px;width:${(r.e-r.s+1)*PPD}px;background:${COLORS[bi%COLORS.length]}"></div>`;
-    return `<div class="r ${r.s==null?'nd':''}"><div class="lab" data-i="${r.i}" title="${esc(tip)}"><span class="n">${esc(r.name)}</span>
+    const c0=COLORS[bi%COLORS.length];
+    return `<div class="r ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c0,.45)}"><div class="lab" data-i="${r.i}" title="${esc(tip)}">${grp?`<span class="gp" data-gp="${r.i}" title="拖曳以移動或排序">⋮⋮</span>`:''}<span class="n">${esc(r.name)}</span>${grp?'':`<span class="lchip" title="${esc(r.list)}">${esc(r.list)}</span>`}
       <span class="mm">${r.members.map(m=>`<span class="chip">${esc(m.name)}</span>`).join('')}</span></div>
       <div class="track" data-ti="${r.i}" style="width:${W}px;${bg}">${tl}${bar}</div></div>`;
   };
@@ -248,12 +254,13 @@ function draw(keep){
     h+=`<div class="r bd"><div class="lab"><span class="n">${esc(b.name)}</span><label class="lt"><input type="checkbox" data-bl="${bi}" ${showList[bi]?'checked':''}> 顯示列表</label></div><div ${tr}></div></div>`;
     if(showList[bi]){
       const known=new Set(boardLists[bi].map(l=>l.id));
-      const groups=boardLists[bi].map(l=>({name:l.name,rs:bl.filter(r=>r.idList===l.id)}));
-      groups.push({name:'(其他)',rs:bl.filter(r=>!known.has(r.idList))});
-      groups.forEach(g=>{if(!g.rs.length)return;
-        h+=`<div class="r lr"><div class="lab"><span class="n">${esc(g.name)}(${g.rs.length})</span></div><div ${tr}></div></div>`;
-        g.rs.sort(cmp).forEach(r=>h+=cardRow(r,bi))});
-    }else bl.sort(cmp).forEach(r=>h+=cardRow(r,bi));
+      const groups=boardLists[bi].map(l=>({id:l.id,name:l.name,rs:bl.filter(r=>r.idList===l.id)}));
+      const oth=bl.filter(r=>!known.has(r.idList));if(oth.length)groups.push({id:'',name:'(其他)',rs:oth});
+      const c=COLORS[bi%COLORS.length],bgc=tint(c,.14);
+      groups.forEach(g=>{
+        h+=`<div class="r lr" data-lid="${g.id}" data-bi="${bi}" style="--bc:${c};background:${bgc}"><div class="lab" style="background:${bgc}"><span class="ltag">列表</span><span class="n">${esc(g.name)}</span></div><div ${tr}></div></div>`;
+        g.rs.sort((a,b)=>a.pos-b.pos).forEach(r=>h+=cardRow(r,bi,true))});
+    }else bl.sort(cmp).forEach(r=>h+=cardRow(r,bi,false));
   });
   w.innerHTML=h+'</div>';
   $('legend').innerHTML=picked.map((b,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(b.name)}</span>`).join('')
@@ -262,6 +269,7 @@ function draw(keep){
 }
 $('wrap').onclick=e=>{
   if(e.target.closest('[data-today]')){goToday();return}
+  if(e.target.closest('[data-gp]'))return;
   const t=e.target.closest('.lab[data-i]');if(t)openCard(+t.dataset.i);
 };
 $('wrap').onchange=e=>{const t=e.target.closest('[data-bl]');if(t){showList[+t.dataset.bl]=t.checked;draw(true)}};
@@ -302,6 +310,46 @@ async function saveRange(r,ns,ne){
   r.startIso=mkIso(fmt(ns),sm);r.dueIso=mkIso(fmt(ne),dm);setDates(r);draw(true);say('儲存中…');
   try{await api(`/cards/${r.id}`,{start:r.startIso,due:r.dueIso},'PUT');say(`已更新「${r.name}」:${fmt(ns)} ~ ${fmt(ne)}`,'ok')}
   catch(e){Object.assign(r,old);setDates(r);draw(true);say(wErr(e),'err')}
+}
+
+/* ---- 拖曳卡片:換列表 / 排序 ---- */
+let cd=null;
+$('wrap').addEventListener('pointerdown',e=>{
+  const g=e.target.closest('[data-gp]');if(!g||e.button!==0)return;
+  cd={r:rows[+g.dataset.gp],t:null,moved:false,x0:e.clientX,y0:e.clientY};e.preventDefault();
+});
+function findTarget(e){
+  const el=document.elementFromPoint(e.clientX,e.clientY),row=el&&el.closest('.r[data-ri],.r[data-lid]');
+  if(!row||+row.dataset.bi!==cd.r.bi)return null;
+  const rc=row.getBoundingClientRect();
+  if(row.dataset.lid!==undefined){return row.dataset.lid?{lid:row.dataset.lid,ref:null,after:false,y:rc.bottom}:null}
+  const ref=rows[+row.dataset.ri];if(ref===cd.r)return null;
+  const after=e.clientY>rc.top+rc.height/2;
+  return {lid:ref.idList,ref,after,y:after?rc.bottom:rc.top};
+}
+document.addEventListener('pointermove',e=>{
+  if(!cd)return;
+  if(Math.abs(e.clientY-cd.y0)+Math.abs(e.clientX-cd.x0)>4)cd.moved=true;if(!cd.moved)return;
+  const w=$('wrap'),wr=w.getBoundingClientRect(),t=$('tip'),dl=$('dropline');
+  if(e.clientY<wr.top+36)w.scrollTop-=14;else if(e.clientY>wr.bottom-36)w.scrollTop+=14;
+  cd.t=findTarget(e);
+  t.style.display='block';t.style.left=e.clientX+12+'px';t.style.top=e.clientY+12+'px';t.textContent=cd.r.name;
+  if(cd.t){dl.style.display='block';dl.style.left=wr.left+'px';dl.style.width=wr.width+'px';dl.style.top=cd.t.y-1+'px'}else dl.style.display='none';
+});
+document.addEventListener('pointerup',()=>{
+  const d=cd;if(!d)return;cd=null;$('tip').style.display='none';$('dropline').style.display='none';
+  if(d.moved&&d.t)moveCard(d.r,d.t);
+});
+async function moveCard(r,t){
+  const L=rows.filter(x=>x.bi===r.bi&&x.idList===t.lid&&x!==r).sort((a,b)=>a.pos-b.pos);
+  let pos;
+  if(!t.ref)pos=L.length?L[0].pos/2:65536;
+  else{const i=L.indexOf(t.ref);
+    pos=t.after?(L[i+1]?(t.ref.pos+L[i+1].pos)/2:t.ref.pos+65536):(L[i-1]?(L[i-1].pos+t.ref.pos)/2:t.ref.pos/2)}
+  const old={idList:r.idList,list:r.list,pos:r.pos},ln=boardLists[r.bi].find(l=>l.id===t.lid).name;
+  r.idList=t.lid;r.list=ln;r.pos=pos;draw(true);say('移動中…');
+  try{await api(`/cards/${r.id}`,{idList:t.lid,pos},'PUT');say(`已將「${r.name}」移到「${ln}」`,'ok')}
+  catch(e){Object.assign(r,old);draw(true);say(wErr(e),'err')}
 }
 
 /* ---- 卡片視窗 ---- */
