@@ -50,6 +50,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 label.lt{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);display:flex;gap:4px;align-items:center}
 .lr{cursor:pointer}
 .lr .lab{font-weight:600;font-size:13px;border-left:4px solid var(--bc)}
+.cnt{flex:none;font-size:11px;font-weight:600;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 8px}
 .arr{flex:none;width:12px;color:var(--mute);font-size:11px}
 .ltag{flex:none;font-size:10px;font-weight:600;color:#fff;background:var(--bc);border-radius:3px;padding:0 5px}
 .cr .lab{padding-left:34px;border-left:4px solid var(--bt)}
@@ -283,8 +284,8 @@ function draw(keep){
       const oth=bl.filter(r=>!known.has(r.idList));if(oth.length)groups.push({id:'',name:'(其他)',rs:oth});
       const c=COLORS[bi%COLORS.length],bgc=tint(c,.14);
       groups.forEach(g=>{
-        const key=`${bi}:${g.id||'_'}`,off=collapsed.has(key);
-        h+=`<div class="r lr" data-lid="${g.id}" data-bi="${bi}" data-key="${key}" title="點擊${off?'展開':'收合'}" style="--bc:${c};background:${bgc}"><div class="lab" style="background:${bgc}"><span class="arr">${off?'▶':'▼'}</span><span class="ltag">列表</span><span class="n">${esc(g.name)}</span></div><div ${tr}></div></div>`;
+        const key=`${bi}:${g.id||'_'}`,off=collapsed.has(key),tot=rows.filter(r=>r.bi===bi&&(g.id?r.idList===g.id:!known.has(r.idList))).length,cnt=g.rs.length+(tot!==g.rs.length?' / '+tot:'');
+        h+=`<div class="r lr" data-lid="${g.id}" data-bi="${bi}" data-key="${key}" title="點擊${off?'展開':'收合'}" style="--bc:${c};background:${bgc}"><div class="lab" style="background:${bgc}"><span class="arr">${off?'▶':'▼'}</span><span class="ltag">列表</span><span class="n">${esc(g.name)}</span><span class="cnt" title="顯示中的卡片數(有篩選時為「顯示中 / 列表總數」)">${cnt}</span></div><div ${tr}></div></div>`;
         if(!off)g.rs.sort((a,b)=>a.pos-b.pos).forEach(r=>h+=cardRow(r,bi,true))});
     }else bl.sort(cmp).forEach(r=>h+=cardRow(r,bi,false));
   });
