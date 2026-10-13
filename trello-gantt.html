@@ -53,6 +53,7 @@ label.lt{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);displ
 .lr{cursor:pointer}
 .lr .lab{font-weight:600;font-size:13px;border-left:4px solid var(--bc)}
 .cnt{flex:none;font-size:11px;font-weight:600;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 8px}
+.bd[data-bkey]{cursor:pointer}
 .arr{flex:none;width:12px;color:var(--mute);font-size:11px}
 .ltag{flex:none;font-size:10px;font-weight:600;color:#fff;background:var(--bc);border-radius:3px;padding:0 5px}
 .cr .lab{padding-left:34px;border-left:4px solid var(--bt)}
@@ -121,7 +122,7 @@ dialog h3{font-size:14px;margin:18px 0 8px}
       <label class="ck"><input type="checkbox" id="fnm" checked> 顯示無成員卡片</label>
       <button class="sec" id="tb">今天</button>
       <button class="sec" id="rf" title="重新讀取 Trello 的最新資料">更新</button><label class="f">自動更新<select id="ar"><option value="0">關閉</option><option value="60">每 1 分鐘</option><option value="300">每 5 分鐘</option><option value="600">每 10 分鐘</option></select></label><span class="hint" id="lu" style="padding-bottom:10px;margin:0"></span>
-      <button class="sec" id="cl">收合全部列表</button><button class="sec" id="ex">展開全部列表</button>
+      <button class="sec" id="cl">收合全部列表</button><button class="sec" id="ex">展開全部列表</button><button class="sec" id="cb">收合全部看板</button><button class="sec" id="eb">展開全部看板</button>
     </div>
     <div class="row2"><button class="sec" id="xl">匯出 Excel</button><button class="sec" id="pdf">匯出 PDF</button></div>
   </div>
@@ -180,7 +181,7 @@ const $=id=>document.getElementById(id), API='https://api.trello.com/1', TZ=8*36
 const COLORS=['#1f6f78','#c2562e','#5b6ee1','#7a9a2e','#b0408a','#d19a1c','#3f7fbf','#8a5a44'];
 const SCALES={day:26,month:6,year:1.5};
 let commentWarn=false;
-let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},collapsed=new Set(),me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null,LIGHT=false;
+let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},collapsed=new Set(),collapsedBoards=new Set(),me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null,LIGHT=false;
 try{$('key').value=localStorage.getItem('tg_key')||'';$('token').value=localStorage.getItem('tg_token')||''}catch(e){}
 
 const tint=(hex,f)=>{const n=parseInt(hex.slice(1),16),dk=!LIGHT&&document.documentElement.dataset.theme==='dark',b=dk?[26,33,41]:[255,255,255],k=dk?Math.min(1,f*1.6):f,m=(v,i)=>Math.round(b[i]+(v-b[i])*k);return `rgb(${m(n>>16,0)},${m(n>>8&255,1)},${m(n&255,2)})`};
@@ -264,7 +265,7 @@ $('gen').onclick=async()=>{
   $('m2').className='msg';$('m2').textContent='讀取卡片中…';
   try{
     const d=await loadData(sel);
-    picked=sel;rows=d.rows;boardMem=d.boardMem;boardLists=d.boardLists;showList={};picked.forEach((b,bi)=>showList[bi]=true);collapsed.clear();
+    picked=sel;rows=d.rows;boardMem=d.boardMem;boardLists=d.boardLists;showList={};picked.forEach((b,bi)=>showList[bi]=true);collapsed.clear();collapsedBoards.clear();
     fillMemberFilter('');updateSummary();$('m2').textContent='';
     if(rows.length){$('p3').hidden=false;draw(false);$('d2').open=false;stamp();startAuto();if(commentWarn)say('部分看板的留言讀取失敗,多段時間區間可能不完整。','err')}
     else{$('m2').textContent='所選看板沒有卡片。'}
@@ -305,6 +306,8 @@ const goToday=()=>{$('wrap').scrollLeft=(rng.today-rng.min)*PPD};
 $('tb').onclick=goToday;
 $('cl').onclick=()=>{picked.forEach((b,bi)=>{if(!showList[bi])return;boardLists[bi].forEach(l=>collapsed.add(`${bi}:${l.id}`));collapsed.add(`${bi}:_`)});draw(true)};
 $('ex').onclick=()=>{collapsed.clear();draw(true)};
+$('cb').onclick=()=>{picked.forEach((b,bi)=>collapsedBoards.add(bi));draw(true)};
+$('eb').onclick=()=>{collapsedBoards.clear();draw(true)};
 
 /* ---- 主題 ---- */
 function applyTheme(p){
@@ -372,7 +375,9 @@ function build(V,today,ex){
   const cmp=(a,b)=>(a.s??1e9)-(b.s??1e9)||(a.e??1e9)-(b.e??1e9);
   picked.forEach((b,bi)=>{
     const bl=V.filter(r=>r.bi===bi);if(!bl.length)return;
-    h+=`<div class="r bd"><div class="lab"><span class="n">${esc(b.name)}</span>${ex?'':`<label class="lt"><input type="checkbox" data-bl="${bi}" ${showList[bi]?'checked':''}> 顯示列表</label>`}</div><div ${tr}></div></div>`;
+    const offB=!ex&&collapsedBoards.has(bi),totB=rows.filter(r=>r.bi===bi).length,cntB=ex?bl.length:bl.length+(totB!==bl.length?' / '+totB:'');
+    h+=`<div class="r bd" data-bkey="${bi}" title="點擊${offB?'展開':'收合'}此看板"><div class="lab">${ex?'':`<span class="arr">${offB?'▶':'▼'}</span>`}<span class="n">${esc(b.name)}</span><span class="cnt" title="顯示中的卡片數(有篩選時為「顯示中 / 看板總數」)">${cntB}</span>${ex?'':`<label class="lt"><input type="checkbox" data-bl="${bi}" ${showList[bi]?'checked':''}> 顯示列表</label>`}</div><div ${tr}></div></div>`;
+    if(offB)return;
     if(showList[bi]){
       const known=new Set(boardLists[bi].map(l=>l.id));
       const groups=boardLists[bi].map(l=>({id:l.id,name:l.name,rs:bl.filter(r=>r.idList===l.id)}));
@@ -395,6 +400,8 @@ $('wrap').onclick=e=>{
   if(rn){const r=rows[+rn.dataset.dr],g=r.segs.find(x=>x.aid===rn.dataset.rn);
     if(g){const t=prompt('時間區間名稱',g.title);if(t!==null)saveSeg(r,g,g.s,g.e,t)}return}
   if(e.target.closest('[data-gp]'))return;
+  const bd=e.target.closest('.bd[data-bkey]');
+  if(bd&&!e.target.closest('.lt')){const k=+bd.dataset.bkey;collapsedBoards.has(k)?collapsedBoards.delete(k):collapsedBoards.add(k);draw(true);return}
   const lr=e.target.closest('.lr[data-key]');
   if(lr){const k=lr.dataset.key;collapsed.has(k)?collapsed.delete(k):collapsed.add(k);draw(true);return}
   const t=e.target.closest('.lab[data-i]');if(t)openCard(+t.dataset.i);
