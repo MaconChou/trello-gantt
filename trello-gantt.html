@@ -57,7 +57,7 @@ label.lt{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);displ
 .ltag{flex:none;font-size:10px;font-weight:600;color:#fff;background:var(--bc);border-radius:3px;padding:0 5px}
 .cr .lab{padding-left:34px;border-left:4px solid var(--bt)}
 .gp{flex:none;width:14px;margin-left:-20px;text-align:center;cursor:grab;color:var(--mute);touch-action:none;letter-spacing:-2px}
-.sr .lab{padding-left:54px}.sr .n{color:var(--mute);font-size:12px}
+.sr .lab{padding-left:54px}.sr .n{color:var(--mute);font-size:12px}.sr .n[data-rn]{cursor:pointer;text-decoration:underline dotted}
 .bar.sg{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.4) 0 4px,transparent 4px 8px);border:1px dashed var(--ink)}
 .bar.ro{opacity:.55;cursor:not-allowed}.bar.ro::before,.bar.ro::after{cursor:not-allowed}
 .hint.err{color:var(--err)}
@@ -107,9 +107,6 @@ dialog h3{font-size:14px;margin:18px 0 8px}
 <details class="panel" id="d2" hidden>
   <summary>2. 選擇看板<span class="sm" id="s2"></span></summary>
   <div id="boards"></div>
-  <div class="f" style="margin-bottom:6px"><label for="tpl">多段時間區間格式(以留言儲存)</label>
-    <div class="row2" style="align-items:center"><input type="text" id="tpl" style="width:min(520px,80vw)" autocomplete="off"><button class="lk" id="tplr" type="button">還原預設</button></div></div>
-  <div class="hint" id="tplh"></div>
   <button id="gen">產生甘特圖</button>
   <div class="msg" id="m2"></div>
 </details>
@@ -147,7 +144,7 @@ dialog h3{font-size:14px;margin:18px 0 8px}
   <div class="desc" id="dd"></div>
   <h3>多段時間區間</h3>
   <div id="sgl"></div>
-  <div class="row2" style="margin-top:6px"><label class="f">開始<input type="date" id="gs"></label><label class="f">結束<input type="date" id="ge"></label><button id="gadd">新增時間區間</button></div>
+  <div class="row2" style="margin-top:6px"><label class="f">名稱<input type="text" id="gt" placeholder="----" style="width:130px"></label><label class="f">開始<input type="date" id="gs"></label><label class="f">結束<input type="date" id="ge"></label><button id="gadd">新增時間區間</button></div>
   <div class="msg" id="sgm"></div>
   <h3>成員</h3>
   <div class="row2" style="align-items:center"><div id="mlist" class="row2" style="align-items:center"></div><select id="madd"></select></div>
@@ -180,7 +177,7 @@ dialog h3{font-size:14px;margin:18px 0 8px}
 const $=id=>document.getElementById(id), API='https://api.trello.com/1', TZ=8*3600e3, H=3600e3;
 const COLORS=['#1f6f78','#c2562e','#5b6ee1','#7a9a2e','#b0408a','#d19a1c','#3f7fbf','#8a5a44'];
 const SCALES={day:26,month:6,year:1.5};
-let tpl=null,tplStr='',commentWarn=false;
+let commentWarn=false;
 let rows=[],boardsData=[],picked=[],boardMem={},boardLists={},showList={},collapsed=new Set(),me='',cur=null,PPD=26,rng={min:0,max:0,today:0},drag=null,LIGHT=false;
 try{$('key').value=localStorage.getItem('tg_key')||'';$('token').value=localStorage.getItem('tg_token')||''}catch(e){}
 
@@ -309,7 +306,7 @@ function build(V,today,ex){
     const c=COLORS[bi%COLORS.length],txt=`${fmt(g.s)} ~ ${fmt(g.e)}`;
     const bar=`<div class="bar sg ${g.mine?'':'ro'}" data-aid="${g.aid}" title="${txt}" style="left:${(g.s-rng.min)*PPD}px;width:${(g.e-g.s+1)*PPD}px;background-color:${c}"></div>`;
     const act=ex?'':(g.mine?`<button class="lk" data-del="${g.aid}" data-dr="${r.i}" title="刪除此時間區間" aria-label="刪除此時間區間">✕</button>`:'<span title="他人建立的區間,無法修改">🔒</span>');
-    return `<div class="r sr ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c,.45)}"><div class="lab" title="${esc(r.name)} · ${txt}"><span class="n">↳ 區間 ${g.n}${g.label?' · '+esc(g.label):''}</span><span class="mm"><span class="chip">${txt}</span></span>${act}</div>
+    return `<div class="r sr ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c,.45)}"><div class="lab" title="${esc(r.name)} · ${txt}"><span class="n" ${!ex&&g.mine?`data-rn="${g.aid}" data-dr="${r.i}" title="點擊修改名稱"`:''}>↳ ${esc(g.title)}${g.label?' · '+esc(g.label):''}</span><span class="mm"><span class="chip">${txt}</span></span>${act}</div>
       <div class="track" data-sg="${r.i}" style="width:${W}px;${bg}">${tl}${bar}</div></div>`;
   }).join('');
   const cardRow=(r,bi,grp)=>{
@@ -343,6 +340,9 @@ $('wrap').onclick=e=>{
   if(e.target.closest('[data-today]')){goToday();return}
   const del=e.target.closest('[data-del]');
   if(del){const r=rows[+del.dataset.dr];deleteSeg(r,del.dataset.del).then(m=>{draw(true);m?say(m,'err'):say('已刪除時間區間。','ok')});return}
+  const rn=e.target.closest('[data-rn]');
+  if(rn){const r=rows[+rn.dataset.dr],g=r.segs.find(x=>x.aid===rn.dataset.rn);
+    if(g){const t=prompt('時間區間名稱',g.title);if(t!==null)saveSeg(r,g,g.s,g.e,t)}return}
   if(e.target.closest('[data-gp]'))return;
   const lr=e.target.closest('.lr[data-key]');
   if(lr){const k=lr.dataset.key;collapsed.has(k)?collapsed.delete(k):collapsed.add(k);draw(true);return}
@@ -443,7 +443,7 @@ function openCard(i){
   cur=rows[i];$('dt').textContent=cur.name;$('di').textContent=`${cur.board} › ${cur.list}`;
   $('ds').value=cur.startIso?fmt(dayOf(cur.startIso)):'';$('de').value=cur.dueIso?fmt(dayOf(cur.dueIso)):'';
   $('dl').href=cur.url;$('dd').textContent=cur.desc||'(無描述)';$('dmsg').textContent='';$('mmsg').textContent='';$('cmsg').textContent='';$('nc').value='';
-  renderMem();renderSegs();$('gs').value=$('ds').value;$('ge').value=$('de').value;$('dlg').showModal();loadComments();
+  renderMem();renderSegs();$('gt').value='';$('gs').value=$('ds').value;$('ge').value=$('de').value;$('dlg').showModal();loadComments();
 }
 $('dx').onclick=()=>$('dlg').close();
 $('dsave').onclick=async()=>{
@@ -502,39 +502,26 @@ $('cadd').onclick=async()=>{
 };
 
 /* ---- 多段時間區間(以留言儲存) ---- */
-const DEFAULT_TPL='#${start:YYYYMMDD}:{end:YYYYMMDD}$#';
+/* 格式:#!title!${start:YYYYMMDD}:{end:YYYYMMDD}$#  例:#!----!$20261012:20261020$# */
+const DEFAULT_TITLE='----';
+const SEG_RE=/#!([^\n]*?)!\$(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})\$#/;
+const OLD_RE=/#\$(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})\$#/;
 const pad=(n,l)=>String(n).padStart(l,'0');
-const escRe=t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const ymd=day=>{const x=new Date(day*864e5);return pad(x.getUTCFullYear(),4)+pad(x.getUTCMonth()+1,2)+pad(x.getUTCDate(),2)};
 const dayFromStr=v=>Date.parse(v+'T00:00:00Z')/864e5;
-function compileTpl(t){
-  const re=/\{(start|end):([^}]*)\}/g,pat=[],groups=[];let last=0,m;
-  while((m=re.exec(t))){
-    const who=m[1];pat.push(escRe(t.slice(last,m.index)));
-    pat.push(m[2].split(/(YYYY|MM|DD)/).map(tk=>{
-      if(tk==='YYYY'){groups.push([who,'y']);return '(\\d{4})'}
-      if(tk==='MM'){groups.push([who,'m']);return '(\\d{2})'}
-      if(tk==='DD'){groups.push([who,'d']);return '(\\d{2})'}
-      return escRe(tk)}).join(''));
-    last=m.index+m[0].length;
-  }
-  pat.push(escRe(t.slice(last)));
-  for(const n of ['start','end'])for(const k of ['y','m','d'])
-    if(groups.filter(g=>g[0]===n&&g[1]===k).length!==1)return {err:`{${n}:…} 必須各包含一次 ${k==='y'?'YYYY':k==='m'?'MM':'DD'}`};
-  return {re:new RegExp(pat.join('')),groups};
-}
-const fmtTok=(day,f)=>{const d=new Date(day*864e5);return f.replace(/YYYY|MM|DD/g,t=>t==='YYYY'?pad(d.getUTCFullYear(),4):t==='MM'?pad(d.getUTCMonth()+1,2):pad(d.getUTCDate(),2))};
-const fmtSeg=(s,e)=>tplStr.replace(/\{(start|end):([^}]*)\}/g,(_,n,f)=>fmtTok(n==='start'?s:e,f));
+const cleanTitle=t=>(String(t||'').replace(/[\r\n]+/g,' ').replace(/!/g,'！').trim())||DEFAULT_TITLE;
+const fmtSeg=(s,e,title)=>'#!'+cleanTitle(title)+'!$'+ymd(s)+':'+ymd(e)+'$#';
 function parseSeg(text){
-  const m=tpl.re.exec(text);if(!m)return null;
-  const v={start:{},end:{}};tpl.groups.forEach(([n,k],i)=>v[n][k]=+m[i+1]);
-  const dn=o=>{const t=Date.UTC(o.y,o.m-1,o.d),d=new Date(t);return d.getUTCMonth()===o.m-1&&d.getUTCDate()===o.d?t/864e5:null};
-  const a=dn(v.start),b=dn(v.end);if(a==null||b==null)return null;
-  return {s:Math.min(a,b),e:Math.max(a,b),marker:m[0],label:text.replace(m[0],'').trim()};
+  let m=SEG_RE.exec(text),title,o;
+  if(m){title=m[1].trim()||DEFAULT_TITLE;o=2}
+  else{m=OLD_RE.exec(text);if(!m)return null;title=DEFAULT_TITLE;o=1}
+  const dn=(y,mo,d)=>{const t=Date.UTC(y,mo-1,d),x=new Date(t);return x.getUTCMonth()===mo-1&&x.getUTCDate()===d?t/864e5:null};
+  const a=dn(+m[o],+m[o+1],+m[o+2]),b=dn(+m[o+3],+m[o+4],+m[o+5]);if(a==null||b==null)return null;
+  return {s:Math.min(a,b),e:Math.max(a,b),marker:m[0],title,label:text.replace(m[0],'').trim()};
 }
 function calcSegs(r){
-  if(!tpl)return [];
   const out=[];
-  (r.cmts||[]).forEach(c=>{const p=parseSeg(c.text);if(p)out.push({aid:c.id,s:p.s,e:p.e,mine:c.mine,marker:p.marker,text:c.text,label:p.label})});
+  (r.cmts||[]).forEach(c=>{const p=parseSeg(c.text);if(p)out.push({aid:c.id,s:p.s,e:p.e,mine:c.mine,marker:p.marker,text:c.text,title:p.title,label:p.label})});
   out.forEach((g,i)=>g.n=i+1);return out;
 }
 async function boardComments(id){
@@ -548,18 +535,17 @@ async function boardComments(id){
   }catch(e){commentWarn=true}
   return out;
 }
-async function createSeg(r,ns,ne){
-  if(!tpl)return '時間區間格式無效,請先修正格式。';
-  const text=fmtSeg(ns,ne);
+async function createSeg(r,ns,ne,title){
+  const text=fmtSeg(ns,ne,title);
   try{
     const a=await api(`/cards/${r.id}/actions/comments`,{text},'POST');
     r.cmts.push({id:a.id,text,mine:true,date:a.date||nowIso()});r.segs=calcSegs(r);return '';
   }catch(e){return wErr(e)}
 }
-async function saveSeg(r,g,ns,ne){
-  const c=r.cmts.find(x=>x.id===g.aid),old=c.text,text=old.replace(g.marker,fmtSeg(ns,ne));
+async function saveSeg(r,g,ns,ne,title){
+  const c=r.cmts.find(x=>x.id===g.aid),old=c.text,nt=cleanTitle(title===undefined?g.title:title),text=old.replace(g.marker,()=>fmtSeg(ns,ne,nt));
   c.text=text;r.segs=calcSegs(r);draw(true);say('儲存中…');
-  try{await api(`/cards/${r.id}/actions/${g.aid}/comments`,{text},'PUT');say(`已更新「${r.name}」的區間:${fmt(ns)} ~ ${fmt(ne)}`,'ok')}
+  try{await api(`/cards/${r.id}/actions/${g.aid}/comments`,{text},'PUT');say(`已更新「${r.name}」的區間「${nt}」:${fmt(ns)} ~ ${fmt(ne)}`,'ok')}
   catch(e){c.text=old;r.segs=calcSegs(r);draw(true);say(wErr(e),'err')}
 }
 async function deleteSeg(r,aid){
@@ -570,7 +556,7 @@ async function deleteSeg(r,aid){
 }
 function renderSegs(){
   const r=cur,ok=r.hasStart&&r.hasDue;
-  $('sgl').innerHTML=(r.segs||[]).map(g=>`<div class="row2" style="align-items:center;margin-bottom:4px"><span class="chip">區間 ${g.n}</span><span>${fmt(g.s)} ~ ${fmt(g.e)}</span>${g.label?`<span class="msg" style="margin:0">${esc(g.label)}</span>`:''}${g.mine?`<button class="lk" data-sd="${g.aid}">刪除</button>`:'<span class="msg" style="margin:0">(他人建立,無法修改)</span>'}</div>`).join('')||'<div class="msg" style="margin:0">尚無自訂時間區間</div>';
+  $('sgl').innerHTML=(r.segs||[]).map(g=>`<div class="row2" style="align-items:center;margin-bottom:4px"><span class="chip">${esc(g.title)}</span><span>${fmt(g.s)} ~ ${fmt(g.e)}</span>${g.label?`<span class="msg" style="margin:0">${esc(g.label)}</span>`:''}${g.mine?`<button class="lk" data-sr="${g.aid}">改名</button><button class="lk" data-sd="${g.aid}">刪除</button>`:'<span class="msg" style="margin:0">(他人建立,無法修改)</span>'}</div>`).join('')||'<div class="msg" style="margin:0">尚無自訂時間區間</div>';
   $('gadd').disabled=!ok;$('sgm').className='msg';
   $('sgm').textContent=ok?'':'此卡片需先設定原生的開始與結束日期,才能建立自訂時間區間。';
 }
@@ -578,36 +564,36 @@ $('gadd').onclick=async()=>{
   const a=$('gs').value,b=$('ge').value,m=$('sgm');
   if(!a||!b||a>b){m.className='msg err';m.textContent='請選擇正確的開始與結束日期。';return}
   m.className='msg';m.textContent='新增中…';
-  const err=await createSeg(cur,dayFromStr(a),dayFromStr(b));draw(true);renderSegs();
+  const err=await createSeg(cur,dayFromStr(a),dayFromStr(b),$('gt').value);draw(true);renderSegs();
   m.className=err?'msg err':'msg ok';m.textContent=err||'已新增時間區間。';
+  if(!err)$('gt').value='';
 };
 $('sgl').onclick=async e=>{
-  const b=e.target.closest('[data-sd]');if(!b)return;
+  const b=e.target.closest('[data-sd],[data-sr]');if(!b)return;
+  if(b.dataset.sr){
+    const g=cur.segs.find(x=>x.aid===b.dataset.sr);if(!g)return;
+    const t=prompt('時間區間名稱',g.title);if(t===null)return;
+    await saveSeg(cur,g,g.s,g.e,t);renderSegs();return;
+  }
   const err=await deleteSeg(cur,b.dataset.sd);draw(true);renderSegs();
   if(err){$('sgm').className='msg err';$('sgm').textContent=err}
 };
-function applyTpl(save){
-  const v=$('tpl').value.trim()||DEFAULT_TPL,c=compileTpl(v),h=$('tplh');
-  if(c.err){tpl=null;h.className='hint err';h.textContent='格式無效:'+c.err+'。修正前無法讀取或建立時間區間。'}
-  else{tpl=c;tplStr=v;h.className='hint';
-    h.textContent=`預覽:${fmtSeg(dayFromStr('2026-10-12'),dayFromStr('2026-10-20'))}。{start:…}、{end:…} 為開始與結束日期的位置,可用 YYYY、MM、DD,其餘為固定文字。`}
-  if(save)try{localStorage.setItem('tg_tpl',v)}catch(e){}
-  rows.forEach(r=>r.segs=calcSegs(r));
-  if(rows.length&&!$('p3').hidden)draw(true);
-}
-$('tpl').value=(()=>{try{return localStorage.getItem('tg_tpl')}catch(e){return null}})()||DEFAULT_TPL;
-$('tpl').onchange=()=>applyTpl(true);
-$('tplr').onclick=()=>{$('tpl').value=DEFAULT_TPL;applyTpl(true)};
-applyTpl(false);
 
 /* ---- 匯出 ---- */
 $('xl').onclick=()=>{
-  const data=vis().map(r=>({看板:r.board,列表:r.list,卡片:r.name,開始日期:r.hasStart?fmt(dayOf(r.startIso)):'',結束日期:r.hasDue?fmt(dayOf(r.dueIso)):'',
-    天數:r.s==null?'':r.e-r.s+1,已完成:r.done?'是':'否',成員:r.members.map(m=>m.name).join('、'),連結:r.url}));
-  const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[18,14,36,12,12,6,8,24,40].map(w=>({wch:w}));
+  const data=[];
+  vis().forEach(r=>{
+    const base={看板:r.board,列表:r.list,卡片:r.name},segs=r.segs||[];
+    const tail={已完成:r.done?'是':'否',成員:r.members.map(m=>m.name).join('、'),連結:r.url};
+    if(r.s!=null||!segs.length)data.push({...base,區間類型:'原生',區間名稱:'',開始日期:r.hasStart?fmt(dayOf(r.startIso)):'',結束日期:r.hasDue?fmt(dayOf(r.dueIso)):'',天數:r.s==null?'':r.e-r.s+1,...tail});
+    segs.forEach(g=>data.push({...base,區間類型:'自訂',區間名稱:g.title,開始日期:fmt(g.s),結束日期:fmt(g.e),天數:g.e-g.s+1,...tail}));
+  });
+  if(!data.length){alert('沒有可匯出的卡片。');return}
+  const ws=XLSX.utils.json_to_sheet(data),keys=Object.keys(data[0]);
+  ws['!cols']=[18,14,36,10,16,12,12,6,8,24,48].map(w=>({wch:w}));
+  data.forEach((row,i)=>['卡片','連結'].forEach(k=>{
+    const c=ws[XLSX.utils.encode_cell({r:i+1,c:keys.indexOf(k)})];if(c)c.l={Target:row.連結,Tooltip:'在 Trello 開啟卡片'}}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'卡片排程');
-  const sg=[];vis().forEach(r=>(r.segs||[]).forEach(g=>sg.push({看板:r.board,列表:r.list,卡片:r.name,區間:g.n,開始日期:fmt(g.s),結束日期:fmt(g.e),天數:g.e-g.s+1,留言文字:g.text,建立者:g.mine?'自己':'他人'})));
-  if(sg.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sg),'多段時間區間');
   XLSX.writeFile(wb,`trello-gantt-${fmt(dayOf(nowIso()))}.xlsx`);
 };
 $('pdf').onclick=()=>{
