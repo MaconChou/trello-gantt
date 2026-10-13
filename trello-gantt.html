@@ -120,6 +120,7 @@ dialog h3{font-size:14px;margin:18px 0 8px}
       <label class="ck"><input type="checkbox" id="fnd" checked> 顯示無日期卡片</label>
       <label class="ck"><input type="checkbox" id="fnm" checked> 顯示無成員卡片</label>
       <button class="sec" id="tb">今天</button>
+      <button class="sec" id="rf" title="重新讀取 Trello 的最新資料">更新</button><label class="f">自動更新<select id="ar"><option value="0">關閉</option><option value="60">每 1 分鐘</option><option value="300">每 5 分鐘</option><option value="600">每 10 分鐘</option></select></label><span class="hint" id="lu" style="padding-bottom:10px;margin:0"></span>
       <button class="sec" id="cl">收合全部列表</button><button class="sec" id="ex">展開全部列表</button>
     </div>
     <div class="row2"><button class="sec" id="xl">匯出 Excel</button><button class="sec" id="pdf">匯出 PDF</button></div>
@@ -193,7 +194,13 @@ const when=iso=>new Date(iso).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hou
 const wErr=e=>(e.status===401||e.status===403)?'權限不足:請用 scope=read,write 重新產生 Token。':'失敗:'+e.message;
 const say=(t,c='')=>{const m=$('gmsg');m.className='msg '+c;m.textContent=t};
 
+let writes=0,writeSeq=0;
 async function api(path,params={},method='GET'){
+  if(method==='GET')return rawApi(path,params,method);
+  writes++;writeSeq++;
+  try{return await rawApi(path,params,method)}finally{writes--;writeSeq++}
+}
+async function rawApi(path,params={},method='GET'){
   const q=new URLSearchParams({...params,key:$('key').value.trim(),token:$('token').value.trim()});
   const r=await fetch(`${API}${path}?${q}`,{method});
   if(!r.ok){const e=new Error(`Trello ${r.status} ${(await r.text()).slice(0,60)}`);e.status=r.status;throw e}
@@ -221,36 +228,77 @@ $('load').onclick=async()=>{
   }catch(e){$('m1').className='msg err';$('m1').textContent='無法載入看板,請確認 API Key 與 Token。'+e.message}
 };
 
-$('gen').onclick=async()=>{
-  picked=[...document.querySelectorAll('#boards input:checked')].map(i=>boardsData[+i.value]);
-  if(!picked.length){$('m2').className='msg err';$('m2').textContent='請至少勾選一個看板。';return}
-  $('m2').className='msg';$('m2').textContent='讀取卡片中…';
-  rows=[];boardMem={};boardLists={};showList={};collapsed.clear();commentWarn=false;
-  try{
-    for(const [bi,b] of picked.entries()){
-      const [cards,lists,mems,acts]=await Promise.all([
-        api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url,pos,desc',members:'true',member_fields:'fullName,username'}),
-        api(`/boards/${b.id}/lists`,{fields:'name'}),
-        api(`/boards/${b.id}/members`,{fields:'fullName,username'}),boardComments(b.id)]);
-      boardLists[bi]=lists;boardMem[bi]=mems;showList[bi]=true;
-      const ln=Object.fromEntries(lists.map(l=>[l.id,l.name])),cm={};
-      acts.sort((p,q)=>p.date<q.date?-1:1).forEach(x=>{const cid=x.data&&x.data.card&&x.data.card.id;
-        if(cid)(cm[cid]=cm[cid]||[]).push({id:x.id,text:(x.data.text||''),mine:x.idMemberCreator===me,date:x.date})});
-      for(const c of cards){
-        const r={id:c.id,board:b.name,bi,idList:c.idList,list:ln[c.idList]||'(其他)',name:c.name,pos:c.pos,desc:c.desc||'',startIso:c.start,dueIso:c.due,
-          done:!!c.dueComplete,members:(c.members||[]).map(m=>({id:m.id,name:m.fullName,username:m.username})),url:c.url,cmts:cm[c.id]||[]};
-        setDates(r);r.segs=calcSegs(r);rows.push(r);
-      }
-      await new Promise(r=>setTimeout(r,150));
+async function loadData(boards){
+  commentWarn=false;
+  const nr=[],nm={},nl={};
+  for(const [bi,b] of boards.entries()){
+    const [cards,lists,mems,acts]=await Promise.all([
+      api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url,pos,desc',members:'true',member_fields:'fullName,username'}),
+      api(`/boards/${b.id}/lists`,{fields:'name'}),
+      api(`/boards/${b.id}/members`,{fields:'fullName,username'}),boardComments(b.id)]);
+    nl[bi]=lists;nm[bi]=mems;
+    const ln=Object.fromEntries(lists.map(l=>[l.id,l.name])),cm={};
+    acts.sort((p,q)=>p.date<q.date?-1:1).forEach(x=>{const cid=x.data&&x.data.card&&x.data.card.id;
+      if(cid)(cm[cid]=cm[cid]||[]).push({id:x.id,text:(x.data.text||''),mine:x.idMemberCreator===me,date:x.date})});
+    for(const c of cards){
+      const r={id:c.id,board:b.name,bi,idList:c.idList,list:ln[c.idList]||'(其他)',name:c.name,pos:c.pos,desc:c.desc||'',startIso:c.start,dueIso:c.due,
+        done:!!c.dueComplete,members:(c.members||[]).map(m=>({id:m.id,name:m.fullName,username:m.username})),url:c.url,cmts:cm[c.id]||[]};
+      setDates(r);r.segs=calcSegs(r);nr.push(r);
     }
-    rows.forEach((r,i)=>r.i=i);
-    const names=[...new Set(Object.values(boardMem).flat().map(m=>m.fullName))].sort();
-    $('mf').innerHTML='<option value="">全部成員</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__none">未指派</option>';
-    $('s2').textContent=`已選 ${picked.length} 個看板 · ${rows.length} 張卡片(${rows.filter(r=>r.s==null).length} 張無日期)`;
-    $('m2').textContent='';
-    if(rows.length){$('p3').hidden=false;draw(false);$('d2').open=false;if(commentWarn)say('部分看板的留言讀取失敗,多段時間區間可能不完整。','err')}else{$('m2').textContent='所選看板沒有卡片。'}
+    await new Promise(r=>setTimeout(r,150));
+  }
+  nr.forEach((r,i)=>r.i=i);
+  return {rows:nr,boardMem:nm,boardLists:nl};
+}
+function fillMemberFilter(keep){
+  const names=[...new Set(Object.values(boardMem).flat().map(m=>m.fullName))].sort();
+  $('mf').innerHTML='<option value="">全部成員</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__none">未指派</option>';
+  if(keep&&[...$('mf').options].some(o=>o.value===keep))$('mf').value=keep;
+}
+const updateSummary=()=>{$('s2').textContent=`已選 ${picked.length} 個看板 · ${rows.length} 張卡片(${rows.filter(r=>r.s==null).length} 張無日期)`};
+const stamp=()=>{$('lu').textContent='最後更新 '+new Date().toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})};
+
+$('gen').onclick=async()=>{
+  const sel=[...document.querySelectorAll('#boards input:checked')].map(i=>boardsData[+i.value]);
+  if(!sel.length){$('m2').className='msg err';$('m2').textContent='請至少勾選一個看板。';return}
+  $('m2').className='msg';$('m2').textContent='讀取卡片中…';
+  try{
+    const d=await loadData(sel);
+    picked=sel;rows=d.rows;boardMem=d.boardMem;boardLists=d.boardLists;showList={};picked.forEach((b,bi)=>showList[bi]=true);collapsed.clear();
+    fillMemberFilter('');updateSummary();$('m2').textContent='';
+    if(rows.length){$('p3').hidden=false;draw(false);$('d2').open=false;stamp();startAuto();if(commentWarn)say('部分看板的留言讀取失敗,多段時間區間可能不完整。','err')}
+    else{$('m2').textContent='所選看板沒有卡片。'}
   }catch(e){$('m2').className='msg err';$('m2').textContent='讀取卡片失敗。'+e.message}
 };
+
+/* ---- 更新(與 Trello 同步) ---- */
+let refreshing=false,autoT=null;
+async function refreshData(auto){
+  if(refreshing||!picked.length||$('p3').hidden)return;
+  if(drag||cd||writes>0){if(!auto)say('有尚未完成的操作,請稍後再按「更新」。','err');return}
+  const seq=writeSeq,btn=$('rf');refreshing=true;btn.disabled=true;btn.textContent='更新中…';if(!auto)say('更新中…');
+  try{
+    const d=await loadData(picked);
+    if(seq!==writeSeq||drag||cd){if(!auto)say('更新期間有修改,請再按一次「更新」。','err');return}
+    const keep=$('mf').value,curId=$('dlg').open&&cur?cur.id:null;
+    rows=d.rows;boardMem=d.boardMem;boardLists=d.boardLists;
+    picked.forEach((b,bi)=>{if(showList[bi]===undefined)showList[bi]=true});
+    fillMemberFilter(keep);updateSummary();
+    if(curId){const nr=rows.find(r=>r.id===curId);
+      if(nr){cur=nr;$('di').textContent=`${nr.board} › ${nr.list}`;renderMem();renderSegs()}else $('dlg').close()}
+    draw(true);stamp();
+    if(!auto||commentWarn)say(commentWarn?'已更新,但部分看板的留言讀取失敗,多段時間區間可能不完整。':'已更新。',commentWarn?'err':'ok');
+  }catch(e){say('更新失敗:'+e.message,'err')}
+  finally{refreshing=false;btn.disabled=false;btn.textContent='更新'}
+}
+function startAuto(){
+  clearInterval(autoT);autoT=null;
+  const sec=+$('ar').value;if(!sec)return;
+  autoT=setInterval(()=>{if(document.hidden||$('dlg').open||$('pd').open)return;refreshData(true)},sec*1000);
+}
+$('rf').onclick=()=>refreshData(false);
+$('ar').onchange=()=>{try{localStorage.setItem('tg_ar',$('ar').value)}catch(e){}startAuto()};
+try{$('ar').value=localStorage.getItem('tg_ar')||'0'}catch(e){}
 ['mf','fnd','fnm'].forEach(id=>$(id).onchange=()=>draw(true));
 $('sc').onchange=()=>{PPD=SCALES[$('sc').value];draw(false)};
 const goToday=()=>{$('wrap').scrollLeft=(rng.today-rng.min)*PPD};
@@ -279,7 +327,7 @@ function cells(unit,label,left){
   return o;
 }
 function draw(keep){
-  const w=$('wrap'),sl=w.scrollLeft,st=w.scrollTop,V=vis(),today=dayOf(nowIso());
+  const w=$('wrap'),sl=w.scrollLeft,st=w.scrollTop,V=vis(),today=dayOf(nowIso()),keepDay=rng.min+sl/PPD;
   if(!V.length){w.innerHTML='<div class="msg" style="padding:16px">沒有符合條件的卡片。</div>';$('legend').innerHTML='';return}
   const spans=V.flatMap(r=>[...(r.s!=null?[[r.s,r.e]]:[]),...(r.segs||[]).map(g=>[g.s,g.e])]);
   const lo=Math.min(today,...spans.map(x=>x[0])),hi=Math.max(today,...spans.map(x=>x[1]));
@@ -287,7 +335,7 @@ function draw(keep){
   w.innerHTML=build(V,today);
   $('legend').innerHTML=picked.map((b,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(b.name)}</span>`).join('')
    +'<span><i style="background:#999;opacity:.4"></i>已完成</span><span><i style="outline:2px solid var(--late);background:var(--card)"></i>已逾期</span><span><i style="background:#e8a33d"></i>今天</span>';
-  if(keep){w.scrollLeft=sl;w.scrollTop=st}else{goToday();w.scrollTop=0}
+  if(keep){w.scrollLeft=(keepDay-rng.min)*PPD;w.scrollTop=st}else{goToday();w.scrollTop=0}
 }
 function build(V,today,ex){
   const W=(rng.max-rng.min+1)*PPD;
