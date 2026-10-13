@@ -43,7 +43,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #xw{position:absolute;left:-100000px;top:0;background:var(--card);color:var(--ink)}
 .exp .lab{position:static}.exp .track{overflow:hidden}
 .r{display:flex;height:30px;border-bottom:1px solid var(--line)}
-.lab{position:sticky;left:0;z-index:6;flex:none;width:380px;background:var(--card);border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
+.lab{position:sticky;left:0;z-index:6;flex:none;width:420px;background:var(--card);border-right:1px solid var(--line);padding:0 10px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
 .lab[data-i]{cursor:pointer}.lab[data-i]:hover{background:var(--hov)}
 .lab .n{overflow:hidden;text-overflow:ellipsis;flex:1}
 .mm{display:flex;gap:3px;max-width:190px;overflow:hidden;flex:none}
@@ -57,7 +57,8 @@ label.lt{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);displ
 .ltag{flex:none;font-size:10px;font-weight:600;color:#fff;background:var(--bc);border-radius:3px;padding:0 5px}
 .cr .lab{padding-left:34px;border-left:4px solid var(--bt)}
 .gp{flex:none;width:14px;margin-left:-20px;text-align:center;cursor:grab;color:var(--mute);touch-action:none;letter-spacing:-2px}
-.sr .lab{padding-left:54px}.sr .n{color:var(--mute);font-size:12px}.sr .n[data-rn]{cursor:pointer;text-decoration:underline dotted}
+.sr .lab{padding-left:54px}.msel{flex:none;width:92px;padding:1px 4px;font-size:11px}
+.sr .n{color:var(--mute);font-size:12px}.sr .n[data-rn]{cursor:pointer;text-decoration:underline dotted}
 .bar.sg{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.4) 0 4px,transparent 4px 8px);border:1px dashed var(--ink)}
 .bar.ro{opacity:.55;cursor:not-allowed}.bar.ro::before,.bar.ro::after{cursor:not-allowed}
 .hint.err{color:var(--err)}
@@ -144,7 +145,7 @@ dialog h3{font-size:14px;margin:18px 0 8px}
   <div class="desc" id="dd"></div>
   <h3>多段時間區間</h3>
   <div id="sgl"></div>
-  <div class="row2" style="margin-top:6px"><label class="f">名稱<input type="text" id="gt" placeholder="----" style="width:130px"></label><label class="f">開始<input type="date" id="gs"></label><label class="f">結束<input type="date" id="ge"></label><button id="gadd">新增時間區間</button></div>
+  <div class="row2" style="margin-top:6px"><label class="f">名稱<input type="text" id="gt" placeholder="----" style="width:130px"></label><label class="f">成員<select id="gu"></select></label><label class="f">開始<input type="date" id="gs"></label><label class="f">結束<input type="date" id="ge"></label><button id="gadd">新增時間區間</button></div>
   <div class="msg" id="sgm"></div>
   <h3>成員</h3>
   <div class="row2" style="align-items:center"><div id="mlist" class="row2" style="align-items:center"></div><select id="madd"></select></div>
@@ -205,7 +206,7 @@ function setDates(r){
 }
 const vis=ndo=>{
   const f=$('mf').value,nd=ndo===undefined?$('fnd').checked:ndo,nm=$('fnm').checked;
-  return rows.filter(r=>(nd||r.s!=null)&&(nm||r.members.length)&&(!f||(f==='__none'?!r.members.length:r.members.some(m=>m.name===f))));
+  return rows.filter(r=>(nd||r.s!=null)&&(nm||r.members.length)&&(!f||(f==='__none'?!r.members.length:r.members.some(m=>m.name===f)||(r.segs||[]).some(g=>memName(g.user)===f))));
 };
 
 /* ---- 連線與讀取 ---- */
@@ -228,16 +229,16 @@ $('gen').onclick=async()=>{
   try{
     for(const [bi,b] of picked.entries()){
       const [cards,lists,mems,acts]=await Promise.all([
-        api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url,pos,desc',members:'true',member_fields:'fullName'}),
+        api(`/boards/${b.id}/cards`,{fields:'name,start,due,dueComplete,idList,url,pos,desc',members:'true',member_fields:'fullName,username'}),
         api(`/boards/${b.id}/lists`,{fields:'name'}),
-        api(`/boards/${b.id}/members`,{fields:'fullName'}),boardComments(b.id)]);
+        api(`/boards/${b.id}/members`,{fields:'fullName,username'}),boardComments(b.id)]);
       boardLists[bi]=lists;boardMem[bi]=mems;showList[bi]=true;
       const ln=Object.fromEntries(lists.map(l=>[l.id,l.name])),cm={};
       acts.sort((p,q)=>p.date<q.date?-1:1).forEach(x=>{const cid=x.data&&x.data.card&&x.data.card.id;
         if(cid)(cm[cid]=cm[cid]||[]).push({id:x.id,text:(x.data.text||''),mine:x.idMemberCreator===me,date:x.date})});
       for(const c of cards){
         const r={id:c.id,board:b.name,bi,idList:c.idList,list:ln[c.idList]||'(其他)',name:c.name,pos:c.pos,desc:c.desc||'',startIso:c.start,dueIso:c.due,
-          done:!!c.dueComplete,members:(c.members||[]).map(m=>({id:m.id,name:m.fullName})),url:c.url,cmts:cm[c.id]||[]};
+          done:!!c.dueComplete,members:(c.members||[]).map(m=>({id:m.id,name:m.fullName,username:m.username})),url:c.url,cmts:cm[c.id]||[]};
         setDates(r);r.segs=calcSegs(r);rows.push(r);
       }
       await new Promise(r=>setTimeout(r,150));
@@ -302,11 +303,13 @@ function build(V,today,ex){
   const tr=`class="track" style="width:${W}px"`;
   let h=`<div class="g"><div class="r hd"><div class="lab">卡片 / 成員</div><div ${tr}>${top}<div class="tbadge" data-today style="left:${x}px">今天</div></div></div>
   <div class="r hd"><div class="lab"></div><div ${tr}>${bot}</div></div>`;
-  const segRows=(r,bi,grp)=>(r.segs||[]).filter(g=>!ex||(g.e>=rng.min&&g.s<=rng.max)).map(g=>{
+  const segRows=(r,bi,grp)=>(r.segs||[]).filter(g=>(!ex||(g.e>=rng.min&&g.s<=rng.max))&&segShown(g)).map(g=>{
     const c=COLORS[bi%COLORS.length],txt=`${fmt(g.s)} ~ ${fmt(g.e)}`;
     const bar=`<div class="bar sg ${g.mine?'':'ro'}" data-aid="${g.aid}" title="${txt}" style="left:${(g.s-rng.min)*PPD}px;width:${(g.e-g.s+1)*PPD}px;background-color:${c}"></div>`;
+    const sh=txt.replace(/\d{4}-/g,'');
+    const memUi=!ex&&g.mine?`<select class="msel" data-ru="${g.aid}" data-dr="${r.i}" aria-label="區間成員" title="區間成員">${memOptions(r,g.user)}</select>`:(g.user?`<span class="chip">@${esc(memName(g.user))}</span>`:'');
     const act=ex?'':(g.mine?`<button class="lk" data-del="${g.aid}" data-dr="${r.i}" title="刪除此時間區間" aria-label="刪除此時間區間">✕</button>`:'<span title="他人建立的區間,無法修改">🔒</span>');
-    return `<div class="r sr ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c,.45)}"><div class="lab" title="${esc(r.name)} · ${txt}"><span class="n" ${!ex&&g.mine?`data-rn="${g.aid}" data-dr="${r.i}" title="點擊修改名稱"`:''}>↳ ${esc(g.title)}${g.label?' · '+esc(g.label):''}</span><span class="mm"><span class="chip">${txt}</span></span>${act}</div>
+    return `<div class="r sr ${grp?'cr':''}" data-ri="${r.i}" data-bi="${bi}" style="--bt:${tint(c,.45)}"><div class="lab" title="${esc(r.name)} · ${txt}"><span class="n" ${!ex&&g.mine?`data-rn="${g.aid}" data-dr="${r.i}" title="點擊修改名稱"`:''}>↳ ${esc(g.title)}${g.label?' · '+esc(g.label):''}</span><span class="mm"><span class="chip" title="${txt}">${sh}</span></span>${memUi}${act}</div>
       <div class="track" data-sg="${r.i}" style="width:${W}px;${bg}">${tl}${bar}</div></div>`;
   }).join('');
   const cardRow=(r,bi,grp)=>{
@@ -348,7 +351,10 @@ $('wrap').onclick=e=>{
   if(lr){const k=lr.dataset.key;collapsed.has(k)?collapsed.delete(k):collapsed.add(k);draw(true);return}
   const t=e.target.closest('.lab[data-i]');if(t)openCard(+t.dataset.i);
 };
-$('wrap').onchange=e=>{const t=e.target.closest('[data-bl]');if(t){showList[+t.dataset.bl]=t.checked;draw(true)}};
+$('wrap').onchange=e=>{
+  const ru=e.target.closest('[data-ru]');
+  if(ru){const r=rows[+ru.dataset.dr],g=r.segs.find(x=>x.aid===ru.dataset.ru);if(g)saveSeg(r,g,g.s,g.e,undefined,ru.value);return}
+  const t=e.target.closest('[data-bl]');if(t){showList[+t.dataset.bl]=t.checked;draw(true)}};
 
 /* ---- 在圖上拖曳日期 ---- */
 $('wrap').addEventListener('pointerdown',e=>{
@@ -443,7 +449,7 @@ function openCard(i){
   cur=rows[i];$('dt').textContent=cur.name;$('di').textContent=`${cur.board} › ${cur.list}`;
   $('ds').value=cur.startIso?fmt(dayOf(cur.startIso)):'';$('de').value=cur.dueIso?fmt(dayOf(cur.dueIso)):'';
   $('dl').href=cur.url;$('dd').textContent=cur.desc||'(無描述)';$('dmsg').textContent='';$('mmsg').textContent='';$('cmsg').textContent='';$('nc').value='';
-  renderMem();renderSegs();$('gt').value='';$('gs').value=$('ds').value;$('ge').value=$('de').value;$('dlg').showModal();loadComments();
+  renderMem();renderSegs();$('gt').value='';$('gu').innerHTML=memOptions(cur,'');$('gs').value=$('ds').value;$('ge').value=$('de').value;$('dlg').showModal();loadComments();
 }
 $('dx').onclick=()=>$('dlg').close();
 $('dsave').onclick=async()=>{
@@ -460,7 +466,7 @@ $('madd').onchange=async()=>{
   const id=$('madd').value,m=$('mmsg');if(!id)return;m.className='msg';m.textContent='新增中…';
   try{
     await api(`/cards/${cur.id}/idMembers`,{value:id},'POST');
-    const p=boardMem[cur.bi].find(x=>x.id===id);cur.members.push({id,name:p.fullName});
+    const p=boardMem[cur.bi].find(x=>x.id===id);cur.members.push({id,name:p.fullName,username:p.username});
     renderMem();draw(true);m.textContent='';
   }catch(e){m.className='msg err';m.textContent=wErr(e);renderMem()}
 };
@@ -502,26 +508,39 @@ $('cadd').onclick=async()=>{
 };
 
 /* ---- 多段時間區間(以留言儲存) ---- */
-/* 格式:#!title!${start:YYYYMMDD}:{end:YYYYMMDD}$#  例:#!----!$20261012:20261020$# */
+/* 格式:#@user@!title!${start:YYYYMMDD}:{end:YYYYMMDD}$#  (@user@ 可省略)  例:#@amy@!----!$20261012:20261020$# */
 const DEFAULT_TITLE='----';
-const SEG_RE=/#!([^\n]*?)!\$(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})\$#/;
+const SEG_RE=/#(?:@([^@!\n]+)@)?!([^\n]*?)!\$(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})\$#/;
 const OLD_RE=/#\$(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})\$#/;
 const pad=(n,l)=>String(n).padStart(l,'0');
 const ymd=day=>{const x=new Date(day*864e5);return pad(x.getUTCFullYear(),4)+pad(x.getUTCMonth()+1,2)+pad(x.getUTCDate(),2)};
 const dayFromStr=v=>Date.parse(v+'T00:00:00Z')/864e5;
 const cleanTitle=t=>(String(t||'').replace(/[\r\n]+/g,' ').replace(/!/g,'！').trim())||DEFAULT_TITLE;
-const fmtSeg=(s,e,title)=>'#!'+cleanTitle(title)+'!$'+ymd(s)+':'+ymd(e)+'$#';
+const cleanUser=u=>String(u||'').replace(/[@!\s]/g,'');
+const fmtSeg=(s,e,title,user)=>{const u=cleanUser(user);return '#'+(u?'@'+u+'@':'')+'!'+cleanTitle(title)+'!$'+ymd(s)+':'+ymd(e)+'$#'};
+function memName(u){
+  if(!u)return '';
+  for(const l of Object.values(boardMem)){const m=l.find(x=>x.username===u);if(m)return m.fullName}
+  return u;
+}
+function memOptions(r,sel){
+  const list=(boardMem[r.bi]||[]).filter(m=>m.username);
+  let o='<option value="">不指定成員</option>'+list.map(m=>`<option value="${esc(m.username)}" ${m.username===sel?'selected':''}>${esc(m.fullName)}</option>`).join('');
+  if(sel&&!list.some(m=>m.username===sel))o+=`<option value="${esc(sel)}" selected>@${esc(sel)}</option>`;
+  return o;
+}
+function segShown(g){const f=$('mf').value;return !f||f==='__none'||!g.user||memName(g.user)===f}
 function parseSeg(text){
-  let m=SEG_RE.exec(text),title,o;
-  if(m){title=m[1].trim()||DEFAULT_TITLE;o=2}
+  let m=SEG_RE.exec(text),title,user='',o;
+  if(m){user=m[1]||'';title=m[2].trim()||DEFAULT_TITLE;o=3}
   else{m=OLD_RE.exec(text);if(!m)return null;title=DEFAULT_TITLE;o=1}
   const dn=(y,mo,d)=>{const t=Date.UTC(y,mo-1,d),x=new Date(t);return x.getUTCMonth()===mo-1&&x.getUTCDate()===d?t/864e5:null};
   const a=dn(+m[o],+m[o+1],+m[o+2]),b=dn(+m[o+3],+m[o+4],+m[o+5]);if(a==null||b==null)return null;
-  return {s:Math.min(a,b),e:Math.max(a,b),marker:m[0],title,label:text.replace(m[0],'').trim()};
+  return {s:Math.min(a,b),e:Math.max(a,b),marker:m[0],title,user,label:text.replace(m[0],'').trim()};
 }
 function calcSegs(r){
   const out=[];
-  (r.cmts||[]).forEach(c=>{const p=parseSeg(c.text);if(p)out.push({aid:c.id,s:p.s,e:p.e,mine:c.mine,marker:p.marker,text:c.text,title:p.title,label:p.label})});
+  (r.cmts||[]).forEach(c=>{const p=parseSeg(c.text);if(p)out.push({aid:c.id,s:p.s,e:p.e,mine:c.mine,marker:p.marker,text:c.text,title:p.title,user:p.user,label:p.label})});
   out.forEach((g,i)=>g.n=i+1);return out;
 }
 async function boardComments(id){
@@ -535,15 +554,15 @@ async function boardComments(id){
   }catch(e){commentWarn=true}
   return out;
 }
-async function createSeg(r,ns,ne,title){
-  const text=fmtSeg(ns,ne,title);
+async function createSeg(r,ns,ne,title,user){
+  const text=fmtSeg(ns,ne,title,user);
   try{
     const a=await api(`/cards/${r.id}/actions/comments`,{text},'POST');
     r.cmts.push({id:a.id,text,mine:true,date:a.date||nowIso()});r.segs=calcSegs(r);return '';
   }catch(e){return wErr(e)}
 }
-async function saveSeg(r,g,ns,ne,title){
-  const c=r.cmts.find(x=>x.id===g.aid),old=c.text,nt=cleanTitle(title===undefined?g.title:title),text=old.replace(g.marker,()=>fmtSeg(ns,ne,nt));
+async function saveSeg(r,g,ns,ne,title,user){
+  const c=r.cmts.find(x=>x.id===g.aid),old=c.text,nt=cleanTitle(title===undefined?g.title:title),nu=user===undefined?g.user:cleanUser(user),text=old.replace(g.marker,()=>fmtSeg(ns,ne,nt,nu));
   c.text=text;r.segs=calcSegs(r);draw(true);say('儲存中…');
   try{await api(`/cards/${r.id}/actions/${g.aid}/comments`,{text},'PUT');say(`已更新「${r.name}」的區間「${nt}」:${fmt(ns)} ~ ${fmt(ne)}`,'ok')}
   catch(e){c.text=old;r.segs=calcSegs(r);draw(true);say(wErr(e),'err')}
@@ -556,7 +575,7 @@ async function deleteSeg(r,aid){
 }
 function renderSegs(){
   const r=cur,ok=r.hasStart&&r.hasDue;
-  $('sgl').innerHTML=(r.segs||[]).map(g=>`<div class="row2" style="align-items:center;margin-bottom:4px"><span class="chip">${esc(g.title)}</span><span>${fmt(g.s)} ~ ${fmt(g.e)}</span>${g.label?`<span class="msg" style="margin:0">${esc(g.label)}</span>`:''}${g.mine?`<button class="lk" data-sr="${g.aid}">改名</button><button class="lk" data-sd="${g.aid}">刪除</button>`:'<span class="msg" style="margin:0">(他人建立,無法修改)</span>'}</div>`).join('')||'<div class="msg" style="margin:0">尚無自訂時間區間</div>';
+  $('sgl').innerHTML=(r.segs||[]).map(g=>`<div class="row2" style="align-items:center;margin-bottom:4px"><span class="chip">${esc(g.title)}</span><span>${fmt(g.s)} ~ ${fmt(g.e)}</span>${g.mine?`<select class="msel" data-su="${g.aid}" aria-label="區間成員">${memOptions(r,g.user)}</select>`:(g.user?`<span class="chip">@${esc(memName(g.user))}</span>`:'')}${g.label?`<span class="msg" style="margin:0">${esc(g.label)}</span>`:''}${g.mine?`<button class="lk" data-sr="${g.aid}">改名</button><button class="lk" data-sd="${g.aid}">刪除</button>`:'<span class="msg" style="margin:0">(他人建立,無法修改)</span>'}</div>`).join('')||'<div class="msg" style="margin:0">尚無自訂時間區間</div>';
   $('gadd').disabled=!ok;$('sgm').className='msg';
   $('sgm').textContent=ok?'':'此卡片需先設定原生的開始與結束日期,才能建立自訂時間區間。';
 }
@@ -564,7 +583,7 @@ $('gadd').onclick=async()=>{
   const a=$('gs').value,b=$('ge').value,m=$('sgm');
   if(!a||!b||a>b){m.className='msg err';m.textContent='請選擇正確的開始與結束日期。';return}
   m.className='msg';m.textContent='新增中…';
-  const err=await createSeg(cur,dayFromStr(a),dayFromStr(b),$('gt').value);draw(true);renderSegs();
+  const err=await createSeg(cur,dayFromStr(a),dayFromStr(b),$('gt').value,$('gu').value);draw(true);renderSegs();
   m.className=err?'msg err':'msg ok';m.textContent=err||'已新增時間區間。';
   if(!err)$('gt').value='';
 };
@@ -578,6 +597,11 @@ $('sgl').onclick=async e=>{
   const err=await deleteSeg(cur,b.dataset.sd);draw(true);renderSegs();
   if(err){$('sgm').className='msg err';$('sgm').textContent=err}
 };
+$('sgl').onchange=async e=>{
+  const sel=e.target.closest('[data-su]');if(!sel)return;
+  const g=cur.segs.find(x=>x.aid===sel.dataset.su);if(!g)return;
+  await saveSeg(cur,g,g.s,g.e,undefined,sel.value);renderSegs();
+};
 
 /* ---- 匯出 ---- */
 $('xl').onclick=()=>{
@@ -585,12 +609,12 @@ $('xl').onclick=()=>{
   vis().forEach(r=>{
     const base={看板:r.board,列表:r.list,卡片:r.name},segs=r.segs||[];
     const tail={已完成:r.done?'是':'否',成員:r.members.map(m=>m.name).join('、'),連結:r.url};
-    if(r.s!=null||!segs.length)data.push({...base,區間類型:'原生',區間名稱:'',開始日期:r.hasStart?fmt(dayOf(r.startIso)):'',結束日期:r.hasDue?fmt(dayOf(r.dueIso)):'',天數:r.s==null?'':r.e-r.s+1,...tail});
-    segs.forEach(g=>data.push({...base,區間類型:'自訂',區間名稱:g.title,開始日期:fmt(g.s),結束日期:fmt(g.e),天數:g.e-g.s+1,...tail}));
+    if(r.s!=null||!segs.length)data.push({...base,區間類型:'原生',區間名稱:'',區間成員:'',開始日期:r.hasStart?fmt(dayOf(r.startIso)):'',結束日期:r.hasDue?fmt(dayOf(r.dueIso)):'',天數:r.s==null?'':r.e-r.s+1,...tail});
+    segs.forEach(g=>data.push({...base,區間類型:'自訂',區間名稱:g.title,區間成員:g.user?memName(g.user):'',開始日期:fmt(g.s),結束日期:fmt(g.e),天數:g.e-g.s+1,...tail}));
   });
   if(!data.length){alert('沒有可匯出的卡片。');return}
   const ws=XLSX.utils.json_to_sheet(data),keys=Object.keys(data[0]);
-  ws['!cols']=[18,14,36,10,16,12,12,6,8,24,48].map(w=>({wch:w}));
+  ws['!cols']=[18,14,36,10,16,14,12,12,6,8,24,48].map(w=>({wch:w}));
   data.forEach((row,i)=>['卡片','連結'].forEach(k=>{
     const c=ws[XLSX.utils.encode_cell({r:i+1,c:keys.indexOf(k)})];if(c)c.l={Target:row.連結,Tooltip:'在 Trello 開啟卡片'}}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'卡片排程');
@@ -610,7 +634,7 @@ $('pgo').onclick=async()=>{
   const s0=Date.parse(ss)/864e5,e0=Date.parse(ee)/864e5,days=e0-s0+1,k=parseFloat($('pz').value);
   const V=vis($('pn').checked).filter(r=>r.s==null||(r.e>=s0&&r.s<=e0)||(r.segs||[]).some(g=>g.e>=s0&&g.s<=e0));
   if(!V.length)return fail('這個區間沒有符合條件的卡片。');
-  const ppd=days<=62?26:days<=400?8:2,labW=380,M=24,FT=14;
+  const ppd=days<=62?26:days<=400?8:2,labW=420,M=24,FT=14;
   const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:$('po').value==='l'?'landscape':'portrait',unit:'pt',format:$('pp').value});
   const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight();
   const chunk=Math.max(5,Math.floor(((PW-2*M)/k-labW)/ppd)),nChunk=Math.ceil(days/chunk);
