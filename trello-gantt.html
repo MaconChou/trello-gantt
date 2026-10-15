@@ -686,7 +686,7 @@ function addImage(el,url,alt){
   const wrap=document.createElement('span'),img=document.createElement('img');
   wrap.style.display='block';img.className='rimg';img.alt=alt||'圖片';img.loading='lazy';img.referrerPolicy='no-referrer';img.title='點擊放大 / 縮小';
   img.onclick=()=>img.classList.toggle('big');
-  const fail=()=>{wrap.textContent='';addLink(wrap,url,'圖片無法載入,點此開啟'+(alt?':'+alt:''))};
+  const fail=()=>{wrap.textContent='';addLink(wrap,url,'圖片(點選顯示)');wrap.firstChild.title=alt||'在新分頁開啟圖片'};
   wrap.appendChild(img);el.appendChild(wrap);
   let host;try{host=new URL(url).hostname}catch(e){return fail()}
   if(isTrelloHost(host))authBlob(url).then(b=>{img.src=b}).catch(fail);
