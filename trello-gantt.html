@@ -214,7 +214,13 @@ function setDates(r){
 }
 const vis=ndo=>{
   const f=$('mf').value,nd=ndo===undefined?$('fnd').checked:ndo,nm=$('fnm').checked;
-  return rows.filter(r=>(nd||r.s!=null)&&(nm||r.members.length)&&(!f||(f==='__none'?!r.members.length:r.members.some(m=>m.name===f)||(r.segs||[]).some(g=>memName(g.user)===f))));
+  return rows.filter(r=>{
+    if(!nd&&r.s==null)return false;
+    const none=!r.members.length;
+    if(!f)return nm||!none;
+    if(f==='__none')return none;
+    return r.members.some(m=>m.name===f)||(r.segs||[]).some(g=>memName(g.user)===f)||(nm&&none);
+  });
 };
 
 /* ---- 連線與讀取 ---- */
