@@ -84,8 +84,11 @@ dialog::backdrop{background:var(--bk)}
 .dh b{font-size:17px}.x{background:none;color:var(--mute);padding:2px 8px;font-size:16px}
 .sub{color:var(--mute);font-size:13px;margin:4px 0 14px}
 dialog h3{font-size:14px;margin:18px 0 8px}
-.desc{white-space:pre-wrap;word-break:break-word;background:var(--cbg);border-radius:6px;padding:8px 10px;max-height:180px;overflow:auto}
-#cm{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.desc{white-space:pre-wrap;word-break:break-word;background:var(--cbg);border-radius:6px;padding:8px 10px;max-height:320px;overflow:auto}
+.desc a,.ct a{color:var(--acc);word-break:break-all}
+.rimg{display:block;max-width:100%;max-height:240px;object-fit:contain;margin:6px 0;border-radius:4px;cursor:zoom-in;background:var(--card)}
+.rimg.big{max-height:none;cursor:zoom-out}
+#cm{max-height:360px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .c{background:var(--cbg);border-radius:6px;padding:8px 10px}.ch{font-size:12px;color:var(--mute)}.ch b{color:var(--ink)}
 .ct{white-space:pre-wrap;word-break:break-word;margin-top:2px}
 </style>
@@ -509,7 +512,7 @@ function renderMem(){
 function openCard(i){
   cur=rows[i];$('dt').textContent=cur.name;$('di').textContent=`${cur.board} › ${cur.list}`;
   $('ds').value=cur.startIso?fmt(dayOf(cur.startIso)):'';$('de').value=cur.dueIso?fmt(dayOf(cur.dueIso)):'';
-  $('dl').href=cur.url;$('dd').textContent=cur.desc||'(無描述)';$('dmsg').textContent='';$('mmsg').textContent='';$('cmsg').textContent='';$('nc').value='';
+  $('dl').href=cur.url;revokeBlobs();if(cur.desc)renderRich($('dd'),cur.desc);else $('dd').textContent='(無描述)';$('dmsg').textContent='';$('mmsg').textContent='';$('cmsg').textContent='';$('nc').value='';
   renderMem();renderSegs();$('gt').value='';$('gu').innerHTML=memOptions(cur,'');$('gs').value=$('ds').value;$('ge').value=$('de').value;$('dlg').showModal();loadComments();
 }
 $('dx').onclick=()=>$('dlg').close();
@@ -545,14 +548,15 @@ async function loadComments(){
     cur.cmts=a.map(x=>({id:x.id,text:x.data.text||'',mine:x.idMemberCreator===me,date:x.date})).sort((p,q)=>p.date<q.date?-1:1);
     cur.segs=calcSegs(cur);draw(true);renderSegs();
     box.innerHTML=a.map(x=>`<div class="c" data-id="${x.id}"><div class="ch"><b>${esc(x.memberCreator?.fullName||'')}</b> · ${when(x.date)}
-      ${x.idMemberCreator===me?'<button class="lk" data-act="edit">編輯</button>':''}</div><div class="ct">${esc(x.data.text)}</div></div>`).join('')||'<div class="msg">尚無留言</div>';
+      ${x.idMemberCreator===me?'<button class="lk" data-act="edit">編輯</button>':''}</div><div class="ct"></div></div>`).join('')||'<div class="msg">尚無留言</div>';
+    [...box.querySelectorAll('.c')].forEach((c,i)=>renderRich(c.querySelector('.ct'),a[i].data.text||''));
   }catch(e){box.innerHTML=`<div class="msg err">${esc('留言讀取失敗。'+e.message)}</div>`}
 }
 $('cm').onclick=async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const c=b.closest('.c'),ct=c.querySelector('.ct');
   if(b.dataset.act==='edit'){
-    const t=ct.textContent;ct.innerHTML='<textarea></textarea><div class="row2" style="margin-top:6px"><button data-act="save">儲存</button><button class="sec" data-act="cancel">取消</button></div>';
+    const t=(cur.cmts.find(x=>x.id===c.dataset.id)||{text:ct.textContent}).text;ct.innerHTML='<textarea></textarea><div class="row2" style="margin-top:6px"><button data-act="save">儲存</button><button class="sec" data-act="cancel">取消</button></div>';
     ct.querySelector('textarea').value=t;
   }else if(b.dataset.act==='cancel'){loadComments()}
   else if(b.dataset.act==='save'){
@@ -663,6 +667,45 @@ $('sgl').onchange=async e=>{
   const g=cur.segs.find(x=>x.aid===sel.dataset.su);if(!g)return;
   await saveSeg(cur,g,g.s,g.e,undefined,sel.value);renderSegs();
 };
+
+/* ---- 描述與留言中的圖片 ---- */
+const blobs=[];
+function revokeBlobs(){blobs.splice(0).forEach(u=>URL.revokeObjectURL(u))}
+$('dlg').addEventListener('close',revokeBlobs);
+const isTrelloHost=h=>/(^|\.)trello\.com$/i.test(h);
+function isImageUrl(u){try{return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(new URL(u).pathname)}catch(e){return false}}
+async function authBlob(url){
+  const u=new URL(url);if(u.hostname==='trello.com')u.hostname='api.trello.com';
+  const r=await fetch(u.toString(),{headers:{Authorization:`OAuth oauth_consumer_key="${$('key').value.trim()}", oauth_token="${$('token').value.trim()}"`}});
+  if(!r.ok)throw new Error(r.status);
+  const b=URL.createObjectURL(await r.blob());blobs.push(b);return b;
+}
+function addLink(el,url,text){const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=text;el.appendChild(a)}
+function addImage(el,url,alt){
+  if(!/^https?:\/\//i.test(url)){el.appendChild(document.createTextNode(`![${alt}](${url})`));return}
+  const wrap=document.createElement('span'),img=document.createElement('img');
+  wrap.style.display='block';img.className='rimg';img.alt=alt||'圖片';img.loading='lazy';img.referrerPolicy='no-referrer';img.title='點擊放大 / 縮小';
+  img.onclick=()=>img.classList.toggle('big');
+  const fail=()=>{wrap.textContent='';addLink(wrap,url,'圖片無法載入,點此開啟'+(alt?':'+alt:''))};
+  wrap.appendChild(img);el.appendChild(wrap);
+  let host;try{host=new URL(url).hostname}catch(e){return fail()}
+  if(isTrelloHost(host))authBlob(url).then(b=>{img.src=b}).catch(fail);
+  else{img.onerror=fail;img.src=url}
+}
+function renderRich(el,text){
+  el.textContent='';
+  const re=/!\[([^\]]*)\]\(\s*(\S+?)(?:\s+"[^"]*")?\s*\)|(https?:\/\/[^\s<>()"']+)/g;
+  let last=0,m;const addText=t=>{if(t)el.appendChild(document.createTextNode(t))};
+  while((m=re.exec(text))){
+    let end=m.index+m[0].length,u=m[3];
+    if(u){const t=u.replace(/[.,;:!?]+$/,'');end-=u.length-t.length;re.lastIndex=end;u=t}
+    addText(text.slice(last,m.index));last=end;
+    if(m[2])addImage(el,m[2],m[1]);
+    else if(isImageUrl(u))addImage(el,u,'');
+    else addLink(el,u,u);
+  }
+  addText(text.slice(last));
+}
 
 /* ---- 匯出 ---- */
 $('xl').onclick=()=>{
